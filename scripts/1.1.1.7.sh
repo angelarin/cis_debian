@@ -9,28 +9,35 @@ DESCRIPTION="Ensure squashfs kernel module is not available"
 a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="squashfs"
 l_mod_type="fs"
 l_mod_path="$(readlink -f /lib/modules/**/kernel/$l_mod_type | sort -u)"
+RESULT="" NOTES=""
+
 f_module_chk()
 {
 l_dl="y" a_showconfig=()
+l_mod_chk_name="$l_mod_name"
 while IFS= read -r l_showconfig; do
 a_showconfig+=("$l_showconfig")
 done < <(modprobe --showconfig | grep -P -- '\b(install|blacklist)\h+'"${l_mod_chk_name//-/_}"'\b')
+
 if ! lsmod | grep "$l_mod_chk_name" &> /dev/null; then
 a_output+=(" - kernel module: \"$l_mod_name\" is not loaded")
 else
 a_output2+=(" - kernel module: \"$l_mod_name\" is loaded")
 fi
+
 if grep -Pq -- '\binstall\h+'"${l_mod_chk_name//-/_}"'\h+(\/usr)?\/bin\/(true|false)\b' <<< "${a_showconfig[*]}"; then
-a_output+=(" - kernel module: \"$l_mod_name\" is not loadable")
+a_output+=(" - kernel module: \"$l_mod_name\" is not loadable (install /bin/false or /bin/true)")
 else
-a_output2+=(" - kernel module: \"$l_mod_name\" is loadable")
+a_output2+=(" - kernel module: \"$l_mod_name\" is loadable (no install /bin/false or /bin/true found)")
 fi
+
 if grep -Pq -- '\bblacklist\h+'"${l_mod_chk_name//-/_}"'\b' <<< "${a_showconfig[*]}"; then
-a_output+=(" - kernel module: \"$l_mod_name\" is deny listed")
+a_output+=(" - kernel module: \"$l_mod_name\" is deny listed (blacklisted)")
 else
-a_output2+=(" - kernel module: \"$l_mod_name\" is not deny listed")
+a_output2+=(" - kernel module: \"$l_mod_name\" is not deny listed (no blacklist found)")
 fi
 }
+
 for l_mod_base_directory in $l_mod_path; do
 if [ -d "$l_mod_base_directory/${l_mod_name/-/\/}" ] && [ -n "$(ls -A "$l_mod_base_directory/${l_mod_name/-/\/}")" ]; then
 a_output3+=(" - \"$l_mod_base_directory\"")
@@ -42,17 +49,11 @@ a_output+=(" - kernel module: \"$l_mod_name\" doesn't exist in \"$l_mod_base_dir
 fi
 done
 
-# Logika printf asli dihilangkan dan diganti dengan logic output CSV
-
-# --- Modifikasi Output untuk Master Script (Mengganti printf terakhir) ---
-NOTES=""
-
-# 1. Tambahkan informasi modul (a_output3) jika ada
+# --- LOGIKA OUTPUT MASTER SCRIPT ---
 if [ "${#a_output3[@]}" -gt 0 ]; then
     NOTES+="INFO: module $l_mod_name exists in: ${a_output3[*]}"
 fi
 
-# 2. Tentukan Status dan gabungkan a_output / a_output2
 if [ "${#a_output2[@]}" -le 0 ]; then
     RESULT="PASS"
     [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | PASS: ${a_output[*]}"
@@ -62,10 +63,6 @@ else
     [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | Correctly set: ${a_output[*]}"
 fi
 
-# 3. Ganti karakter enter/newline/spasi ganda dengan satu spasi untuk output satu baris
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
-
-# 4. Cetak output dalam format ID|DESKRIPSI|RESULT|NOTES
 echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
-# --------------------------------------------------------------------------
 }
