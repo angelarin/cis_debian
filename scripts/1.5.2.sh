@@ -2,12 +2,12 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="1.5.2"
-DESCRIPTION="Ensure ptrace_scope is restricted (kernel.yama.ptrace_scope=1|2|3)"
+DESCRIPTION="Ensure ptrace_scope is restricted (kernel.yama.ptrace_scope=1 2 3)"
 # -----------------------------------------------------
 
 {
 a_output=() a_output2=()
-a_parlist=("kernel.yama.ptrace_scope=(1|2|3)")
+a_parlist=("kernel.yama.ptrace_scope=(1 2 3)")
 l_ufwscf="$([ -f /etc/default/ufw ] && awk -F= '/^\s*IPT_SYSCTL=/ {print $2}' /etc/default/ufw)"
 l_systemdsysctl="$(readlink -f /lib/systemd/systemd-sysctl)"
 RESULT="" NOTES=""
