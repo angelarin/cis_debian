@@ -24,7 +24,7 @@ fi
 # 2. Audit Aktivasi Systemd (tmp.mount enabled status)
 L_SYSTEMCTL_STATUS=$(systemctl is-enabled tmp.mount 2>/dev/null)
 
-if [[ "$L_SYSTEMCTL_STATUS" == "generated" || "$L_SYSTEMCTL_STATUS" == "enabled" ]]; then
+if [[ "$L_SYSTEMCTL_STATUS" == "generated" || "$L_SYSTEMCTL_STATUS" == "enabled" || "$L_SYSTEMCTL_STATUS" == "static" ]]; then
     a_output+=(" - tmp.mount is enabled for boot (Status: $L_SYSTEMCTL_STATUS)")
 elif [[ "$L_SYSTEMCTL_STATUS" == "masked" || "$L_SYSTEMCTL_STATUS" == "disabled" ]]; then
     a_output2+=(" - tmp.mount is DISABLED/MASKED (Status: $L_SYSTEMCTL_STATUS)")
