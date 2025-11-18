@@ -6,14 +6,15 @@ DESCRIPTION="Ensure ptrace_scope is restricted (kernel.yama.ptrace_scope=1|2|3)"
 # -----------------------------------------------------
 
 {
-a_output=(); a_output2=(); a_parlist=("kernel.yama.ptrace_scope=(1|2|3)")
+a_output=() a_output2=()
+a_parlist=("kernel.yama.ptrace_scope=(1|2|3)")
 l_ufwscf="$([ -f /etc/default/ufw ] && awk -F= '/^\s*IPT_SYSCTL=/ {print $2}' /etc/default/ufw)"
 l_systemdsysctl="$(readlink -f /lib/systemd/systemd-sysctl)"
 RESULT="" NOTES=""
 
 f_kernel_parameter_chk()
 {
-l_running_parameter_value="$(sysctl "$l_parameter_name" | awk -F= '{print $2}' | xargs)" # Check running configuration
+l_running_parameter_value="$(sysctl "$l_parameter_name" | awk -F'=' '{print $2}' | xargs)" # Check running configuration
 if grep -Pq -- '\b'"$l_parameter_value"'\b' <<< "$l_running_parameter_value"; then
 a_output+=(" - \"$l_parameter_name\" is correctly set to \"$l_running_parameter_value\" in the running configuration")
 else
