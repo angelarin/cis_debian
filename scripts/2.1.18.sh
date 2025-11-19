@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="2.1.18"
-DESCRIPTION="Ensure web server services (apache2, nginx) are not in use"
+DESCRIPTION="Ensure web server services (apache2 and nginx) are not in use"
 # -----------------------------------------------------
 
 {
