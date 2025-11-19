@@ -31,7 +31,7 @@ else
     fi
 
     # 2. Cek izin (0644 atau lebih ketat)
-    if [ "$(printf "%o" "$L_ACCESS_OCTAL")" -le "$EXPECTED_MODE" ]; then
+    if [ "$L_ACCESS_OCTAL" -le "$EXPECTED_MODE" ]; then
         a_output+=(" - Access ($L_ACCESS_OCTAL) is set to $EXPECTED_MODE or more restrictive.")
     else
         a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than $EXPECTED_MODE.")
