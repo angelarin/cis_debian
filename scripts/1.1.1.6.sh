@@ -46,18 +46,18 @@ f_module_chk()
 
 # 1. Cek keberadaan file modul di sistem
 for l_mod_base_directory in $l_mod_path; do
-    # Logika Cek Keberadaan Modul (Mengatasi overlayfs yang ada di fs/overlay)
-    if [ -d "$l_mod_base_directory/${l_mod_name/-/\/}" ] && [ -n "$(ls -A "$l_mod_base_directory/${l_mod_name/-/\/}" 2>/dev/null)" ]; then
-        a_output3+=(" - \"$l_mod_base_directory\"")
-        l_module_exists="y"
-    fi
+    if [ -d "$l_mod_base_directory/${l_mod_name/-/\/}" ] && [ -n "$(ls -A "$l_mod_base_directory/${l_mod_name/-/\/}" 2>/dev/null)" ]; then
+        a_output3+=(" - \"$l_mod_base_directory\"")
+        l_module_exists="y"
+    fi
 done
 
 # 2. Jika modul ada, jalankan pemeriksaan keamanan HANYA SEKALI
 if [ "$l_module_exists" = "y" ]; then
-    # Atur nama modul cek untuk menangani kasus seperti 'overlay' vs 'overlayfs'
-    # Asumsi yang paling aman adalah memeriksa 'overlayfs'
-    f_module_chk "$l_mod_name"
+    l_mod_chk_name="$l_mod_name" 
+    [[ "$l_mod_name" =~ overlay ]] && l_mod_chk_name="${l_mod_name::-2}"
+    
+    f_module_chk "$l_mod_chk_name"
 else
     a_output+=(" - kernel module: \"$l_mod_name\" not found on disk. Audit N/A.")
 fi
