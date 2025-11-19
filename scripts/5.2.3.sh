@@ -7,7 +7,7 @@ DESCRIPTION="Ensure sudo log file exists (logfile is set)"
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
-EXPECTED_SETTING='^\h*Defaults\h+([^#]+,\h*)?logfile\h*=\h*(\"|\')?\H+(\"|\')?(,\h*\H+\h*)*\h*(#.*)?$'
+EXPECTED_SETTING="^\h*Defaults\h+([^#]+,\h*)?logfile\h*=\h*(\"|\')?\H+(\"|\')?(,\h*\H+\h*)*\h*(#.*)?$"
 
 # --- FUNGSI AUDIT LOGFILE ---
 L_OUTPUT=$(grep -rPsi -- "$EXPECTED_SETTING" /etc/sudoers /etc/sudoers.d/* 2>/dev/null)
