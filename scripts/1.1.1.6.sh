@@ -25,7 +25,7 @@ f_module_chk()
 
     # 1. Cek: Modul tidak dimuat
     if ! lsmod | grep -q "$l_chk_name" 2>/dev/null; then
-        _output+=(" - kernel module: \"$l_mod_name\" is not loaded")
+        a_output+=(" - kernel module: \"$l_mod_name\" is not loaded")
     else
         a_output2+=(" - kernel module: \"$l_mod_name\" is loaded")
     fi
