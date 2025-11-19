@@ -31,7 +31,7 @@ else
 
     # 2. Cek izin (0600 atau lebih ketat)
     # Cek apakah izin kurang dari atau sama dengan 0600 (lebih ketat atau sama)
-    if [ "$(printf "%o" "$L_ACCESS")" -le "$EXPECTED_MODE" ]; then
+    if [ "$L_ACCESS" -le 384 ]; then
         a_output+=(" - Access ($L_ACCESS) is set to $EXPECTED_MODE or more restrictive.")
     else
         a_output2+=(" - Access ($L_ACCESS) is less restrictive than $EXPECTED_MODE.")
