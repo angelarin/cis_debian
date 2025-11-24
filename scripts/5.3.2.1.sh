@@ -8,11 +8,11 @@ DESCRIPTION="Ensure pam_unix module is enabled"
 {
 a_output=() a_output2=() RESULT="FAIL" NOTES=""
 TARGET_MODULE="pam_unix\.so"
-TARGET_FILES="/etc/pam.d/common-{account,auth,password,session,session-noninteractive}"
 EXPECTED_COUNT=5 # Ada 5 file yang dicek
 
 # --- FUNGSI AUDIT PAM UNIX ---
-L_OUTPUT=$(grep -PH -- "\b$TARGET_MODULE\b" $TARGET_FILES 2>/dev/null)
+# FIX: Memasukkan daftar file langsung agar Brace Expansion bekerja.
+L_OUTPUT=$(grep -PH -- "\b$TARGET_MODULE\b" /etc/pam.d/common-{account,auth,password,session,session-noninteractive})
 L_COUNT=$(echo "$L_OUTPUT" | grep -c "\b$TARGET_MODULE\b")
 
 if [ "$L_COUNT" -ge "$EXPECTED_COUNT" ]; then
