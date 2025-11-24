@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="5.4.3.2"
-DESCRIPTION="Ensure default user shell timeout is configured (TMOUT <= 900, readonly, export)"
+DESCRIPTION="Ensure default user shell timeout is configured (TMOUT <= 900 readonly export)"
 # -----------------------------------------------------
 
 {
