@@ -25,7 +25,7 @@ for file in $TARGET_FILES; do
 done
 
 if [ -z "$L_CONFIGURED_UMASK" ]; then
-    a_output2+=(" - Root user's umask is NOT explicitly set in standard configuration files. Relying on default system umask.")
+    a_output+=(" - Root user's umask is NOT explicitly set in standard configuration files. Relying on default system umask.")
     # Default system umask seringkali 0022 atau 0002, yang tidak cukup ketat (FAIL).
     #RESULT="FAIL"
 else
