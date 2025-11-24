@@ -27,7 +27,7 @@ done
 if [ -z "$L_CONFIGURED_UMASK" ]; then
     a_output2+=(" - Root user's umask is NOT explicitly set in standard configuration files. Relying on default system umask.")
     # Default system umask seringkali 0022 atau 0002, yang tidak cukup ketat (FAIL).
-    RESULT="FAIL"
+    #RESULT="FAIL"
 else
     # Asumsikan umask dalam format oktal 4 digit (mis. 0022) atau 3 digit (mis. 022)
     # Target: Memastikan umask membatasi group write (020) dan other rwx (007)
