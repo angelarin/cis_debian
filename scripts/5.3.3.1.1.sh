@@ -21,7 +21,8 @@ elif [ -n "$L_CONF_FAIL" ]; then
     RESULT="FAIL"
     a_output2+=(" - $FAILLOCK_CONF: Deny limit set > $MAX_DENY. Offending: $L_CONF_FAIL")
 else
-    a_output+=(" - $FAILLOCK_CONF: Deny setting not found. Assuming default or config elsewhere.")
+    RESULT="FAIL"
+    a_output+=(" - $FAILLOCK_CONF: Deny setting not found. Configuration is not explicit")
 fi
 
 # 2. Cek deny di common-auth (mencari deny > 5)
