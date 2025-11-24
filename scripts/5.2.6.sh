@@ -8,45 +8,55 @@ DESCRIPTION="Ensure sudo authentication timeout is configured correctly (<= 15 m
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
 MAX_TIMEOUT=15 # Minutes
-MAX_TIMEOUT_SEC=900 # Seconds
+# MAX_TIMEOUT_SEC=900 # Tidak digunakan, kita fokus pada nilai menit
 
 # 1. Cek konfigurasi timestamp_timeout di sudoers*
+# Mencari semua nilai yang dikonfigurasi, termasuk -1
 L_CONFIGURED_TIMEOUT=$(grep -roP "timestamp_timeout=\K-?[0-9]*" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | sort -n | tail -n 1)
 
 if [ -n "$L_CONFIGURED_TIMEOUT" ]; then
     L_VALUE=$L_CONFIGURED_TIMEOUT
     a_output+=(" - Configured timestamp_timeout value found: $L_VALUE minutes.")
     
+    # --- LOGIKA PENILAIAN JIKA KONFIGURASI ADA ---
     if [ "$L_VALUE" -eq -1 ]; then
         RESULT="FAIL"
         a_output2+=(" - timestamp_timeout is set to -1 (disabled/infinite timeout).")
+        NOTES_REMEDIATION="Untuk remediasi, edit file sudoers dan ubah menjadi: Defaults timestamp_timeout=$MAX_TIMEOUT"
     elif [ "$L_VALUE" -gt "$MAX_TIMEOUT" ]; then
         RESULT="FAIL"
         a_output2+=(" - timestamp_timeout is set to $L_VALUE minutes (Greater than $MAX_TIMEOUT minutes).")
+        NOTES_REMEDIATION="Untuk remediasi, edit file sudoers dan ubah nilai timeout menjadi $MAX_TIMEOUT menit atau kurang."
     else
         a_output+=(" - timestamp_timeout is set to $L_VALUE minutes (<= $MAX_TIMEOUT minutes).")
     fi
 else
-    # 2. Jika tidak dikonfigurasi, cek default system sudo -V
-    L_DEFAULT_TIMEOUT_RAW=$(sudo -V 2>/dev/null | grep "Authentication timestamp timeout:")
-    L_DEFAULT_TIMEOUT_SEC=$(echo "$L_DEFAULT_TIMEOUT_RAW" | grep -oP '\d+' | head -n 1) # Biasanya 900
+    # 2. LOGIKA BARU: Jika TIDAK ADA konfigurasi eksplisit, maka FAIL.
+    # Meskipun default-nya mungkin 15 menit (900 detik), audit ini MENGHARUSKAN konfigurasi eksplisit.
     
-    if [ "$L_DEFAULT_TIMEOUT_SEC" -le "$MAX_TIMEOUT_SEC" ]; then
-        a_output+=(" - timestamp_timeout is NOT explicitly set. Default timeout is $L_DEFAULT_TIMEOUT_SEC seconds (<= $MAX_TIMEOUT_SEC seconds).")
-    else
-        RESULT="FAIL"
-        a_output2+=(" - timestamp_timeout is NOT explicitly set. Default timeout ($L_DEFAULT_TIMEOUT_SEC s) is greater than $MAX_TIMEOUT_SEC seconds.")
-    fi
+    L_DEFAULT_TIMEOUT_RAW=$(sudo -V 2>/dev/null | grep "Authentication timestamp timeout:")
+    L_DEFAULT_TIMEOUT_DISPLAY=$(echo "$L_DEFAULT_TIMEOUT_RAW" | sed 's/Authentication timestamp timeout: //')
+    
+    RESULT="FAIL"
+    a_output2+=(" - timestamp_timeout is NOT explicitly configured in /etc/sudoers or /etc/sudoers.d/.")
+    a_output+=(" - System default timeout: $L_DEFAULT_TIMEOUT_DISPLAY.")
+    NOTES_REMEDIATION="Untuk remediasi, tambahkan baris 'Defaults timestamp_timeout=$MAX_TIMEOUT' ke /etc/sudoers menggunakan 'sudo visudo'."
 fi
 
 # --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "${#a_output2[@]}" -le 0 ]; then
+if [ "$RESULT" = "PASS" ]; then
     NOTES+="PASS: ${a_output[*]}"
 else
     NOTES+="FAIL: Reason(s) for audit failure: ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | Correctly set/Info: ${a_output[*]}"
+    
+    # Tambahkan informasi (default/lainnya) jika ada
+    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | Info: ${a_output[*]}"
+    
+    # Tambahkan Remediasi
+    NOTES+=" | Remediasi: $NOTES_REMEDIATION"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
 echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
+
 }
