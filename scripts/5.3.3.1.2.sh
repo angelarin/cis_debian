@@ -21,6 +21,7 @@ elif [ -n "$L_CONF_FAIL" ]; then
     RESULT="FAIL"
     a_output2+=(" - $FAILLOCK_CONF: Unlock time set too low (between 1 and 899). Offending: $L_CONF_FAIL")
 else
+    RESULT="FAIL"
     a_output+=(" - $FAILLOCK_CONF: Unlock time setting not found. Assuming default or config elsewhere.")
 fi
 

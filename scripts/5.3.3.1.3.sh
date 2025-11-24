@@ -1,4 +1,4 @@
-#!/usr-bin/env bash
+#!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="5.3.3.1.3"
