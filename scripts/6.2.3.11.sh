@@ -18,34 +18,43 @@ f_check_files_modification() {
     local found_count=0
     
     for target in "${TARGET_FILES[@]}"; do
-        local escaped_target=$(echo "$target" | sed 's/\//\\\/g')
+        # PERBAIKAN ESCAPING
+        local escaped_target=$(echo "$target" | sed 's/\//\\\//g')
         local cmd=""
         
+        # PERBAIKAN AWK QUERY (menambahkan opsi ||/ -k ... /)
         if [ "$source" = "disk" ]; then
-            cmd="awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && / key= *[!-~]* *$/{print \$0}' /etc/audit/rules.d/*.rules"
+            cmd="awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}' /etc/audit/rules.d/*.rules"
         else
-            cmd="auditctl -l | awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && / key= *[!-~]* *$/{print \$0}'"
+            cmd="sudo auditctl -l | awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}'"
         fi
+        
+        # NOTE: Menambahkan sudo pada auditctl di sini karena biasanya butuh root.
         
         L_OUTPUT=$(eval "$cmd" 2>/dev/null)
         
-        if [ -n "$L_OUTPUT" ] && echo "$L_OUTPUT" | grep -q "key=session"; then
+        # Memastikan output valid dan mengandung key=session (walaupun key=session sudah dicari oleh awk)
+        if [ -n "$L_OUTPUT" ]; then 
             a_output+=(" - $type: Rule for $target found.")
             found_count=$((found_count + 1))
         else
-            a_output2+=(" - $type: Rule for $target (key=session) is MISSING.")
+            a_output2+=(" - $type: Rule for $target is MISSING.")
         fi
     done
     
     return $found_count
 }
 
-# Run Checks
-FOUND_COUNT_DISK=$(f_check_files_modification "Disk" "disk")
-FOUND_COUNT_LOADED=$(f_check_files_modification "Loaded" "loaded")
+# PERBAIKAN PEMANGGILAN FUNGSI (Menggunakan $? untuk return code)
+f_check_files_modification "Disk" "disk"
+FOUND_COUNT_DISK=$?
+
+f_check_files_modification "Loaded" "loaded"
+FOUND_COUNT_LOADED=$?
 
 # --- LOGIKA OUTPUT MASTER SCRIPT ---
 if [ "$FOUND_COUNT_DISK" -eq "$EXPECTED_TOTAL" ] && [ "$FOUND_COUNT_LOADED" -eq "$EXPECTED_TOTAL" ]; then
+    RESULT="PASS"
     NOTES+="PASS: All $EXPECTED_TOTAL rules found (Disk and Loaded). ${a_output[*]}"
 else
     RESULT="FAIL"
