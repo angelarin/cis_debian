@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
+# --- Informasi Audit ---
 CHECK_ID="6.2.3.8"
 DESCRIPTION="Ensure events that modify user/group information are collected"
-# -----------------------------------------------------
+# -----------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
@@ -11,7 +11,7 @@ TARGET_FILES=(
     "/etc/group" "/etc/passwd" "/etc/gshadow" "/etc/shadow" "/etc/security/opasswd"
     "/etc/nsswitch.conf" "/etc/pam.conf" "/etc/pam.d"
 )
-EXPECTED_TOTAL=8
+EXPECTED_TOTAL=${#TARGET_FILES[@]}
 FOUND_COUNT_DISK=0
 FOUND_COUNT_LOADED=0
 
@@ -21,49 +21,59 @@ f_check_files_modification() {
     local found_count=0
     
     for target in "${TARGET_FILES[@]}"; do
-        local escaped_target=$(echo "$target" | sed 's/\//\\\/g')
+        # PERBAIKAN: Mengganti / dengan \/ agar awk bisa mencocokkan path secara literal
+        local escaped_target=$(echo "$target" | sed 's/\//\\\//g') 
         local cmd=""
         
+        # AWK Pattern yang digunakan: /target/ && / -p wa/ && / key=.../
+        local awk_pattern="/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}"
+        
         if [ "$source" = "disk" ]; then
-            cmd="awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}' /etc/audit/rules.d/*.rules"
+            # Pengecekan Disk: Mengarahkan error 'No such file' ke /dev/null
+            # Perhatikan: Karena Anda menggunakan path eksplisit /etc/audit/rules.d/50-identity.rules 
+            # dalam manual check Anda, kita tetap menggunakan *.rules untuk fleksibilitas, 
+            # dan menekan error 'No such file' yang disebabkan oleh globbing yang gagal.
+            cmd="awk '${awk_pattern}' /etc/audit/rules.d/*.rules 2>/dev/null"
         else
-            cmd="auditctl -l | awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}'"
+            # Pengecekan Loaded: auditctl -l
+            cmd="sudo auditctl -l | awk '${awk_pattern}'"
         fi
         
-        L_OUTPUT=$(eval "$cmd" 2>/dev/null)
+        # Eksekusi perintah
+        L_OUTPUT=$(eval "$cmd")
         
         if [ -n "$L_OUTPUT" ]; then
             a_output+=(" - $type: Rule for $target found.")
             found_count=$((found_count + 1))
         else
-            # Direktori /etc/pam.d mungkin tidak ada sebagai file tunggal di rules.d
-            if [ "$target" != "/etc/pam.d" ]; then
-                 a_output2+=(" - $type: Rule for $target is MISSING.")
-            else
-                 # Cek apakah direktori ada di rules.d/ sebagai /etc/pam.d/
-                 a_output+=(" - $type: Rule for $target is MISSING but checking if individual files are covered.")
-            fi
+            a_output2+=(" - $type: Rule for $target is MISSING.")
         fi
     done
     
     return $found_count
 }
 
-# Run Checks
+# Jalankan Pengecekan
 f_check_files_modification "Disk" "disk"
 FOUND_COUNT_DISK=$?
 f_check_files_modification "Loaded" "loaded"
 FOUND_COUNT_LOADED=$?
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "$FOUND_COUNT_DISK" -ge 7 ] && [ "$FOUND_COUNT_LOADED" -ge 7 ]; then # >= 7 karena /etc/pam.d bisa jadi tidak dicover sebagai entry tunggal
-    NOTES+="PASS: Most required identity files are audited (Disk: $FOUND_COUNT_DISK/$EXPECTED_TOTAL, Loaded: $FOUND_COUNT_LOADED/$EXPECTED_TOTAL). ${a_output[*]}"
+# --- LOGIKA OUTPUT FINAL ---
+REQUIRED_PASS_COUNT=8 
+
+if [ "$FOUND_COUNT_DISK" -ge $REQUIRED_PASS_COUNT ] && [ "$FOUND_COUNT_LOADED" -ge $REQUIRED_PASS_COUNT ]; then
+    RESULT="PASS"
+    NOTES+="PASS: All required identity files are audited (Disk: $FOUND_COUNT_DISK/$EXPECTED_TOTAL, Loaded: $FOUND_COUNT_LOADED/$EXPECTED_TOTAL). ${a_output[*]}"
 else
     RESULT="FAIL"
-    NOTES+="FAIL: Identity file auditing failed (Disk: $FOUND_COUNT_DISK/$EXPECTED_TOTAL, Loaded: $FOUND_COUNT_LOADED/$EXPECTED_TOTAL). ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    # Menampilkan file yang hilang (a_output2) dan yang ditemukan (a_output) untuk detail
+    NOTES+="FAIL: Identity file auditing failed (Disk: $FOUND_COUNT_DISK/$EXPECTED_TOTAL, Loaded: $FOUND_COUNT_LOADED/$EXPECTED_TOTAL)."
+    [ "${#a_output2[@]}" -gt 0 ] && NOTES+=" MISSING: ${a_output2[*]}"
+    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" FOUND: ${a_output[*]}"
 fi
 
+# Format output akhir
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
 echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
 }
