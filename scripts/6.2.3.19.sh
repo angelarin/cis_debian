@@ -1,103 +1,196 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.2.3.19"
-DESCRIPTION="Ensure kernel module loading unloading and modification is collected"
-# -----------------------------------------------------
+# --- Definisi Metadata Skrip ---
+CHECK_ID="6.1.13"
+DESCRIPTION="Memastikan audit terhadap modifikasi dan eksekusi modul kernel."
+RESULT="FAIL"
+NOTES=""
 
-{
-a_output=() a_output2=() RESULT="PASS" NOTES=""
-KMOD_PATH="/usr/bin/kmod"
-SYSCALLS=("init_module" "finit_module" "delete_module" "create_module" "query_module")
-ARCHS=("b64" "b32")
-EXPECTED_SYSCALL_RULES=2 # 1 rule per arch for syscall group
-EXPECTED_KMOD_RULES=2    # 1 rule per arch for kmod path
-FOUND_SYSCALL_DISK=0
-FOUND_KMOD_DISK=0
-FOUND_SYSCALL_LOADED=0
-FOUND_KMOD_LOADED=0
+# --- Variabel Global dan Utilitas ---
+UID_MIN=$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs 2>/dev/null)
+[ -z "$UID_MIN" ] && UID_MIN=1000 # Default jika tidak ditemukan
+AUDIT_TARGET_SYSCALLS="(init_module|finit_module|delete_module|create_module|query_module)"
 
-# Dapatkan UID_MIN
-L_UID_MIN=$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs 2>/dev/null)
-[ -z "$L_UID_MIN" ] && L_UID_MIN=1000
+# Status hasil per sub-check
+CHECK_1_RESULT="FAIL"
+CHECK_2_RESULT="FAIL"
+CHECK_3_RESULT="FAIL"
 
-# Fungsi bantu untuk cek Sycalls
-f_check_syscalls() {
-    local type=$1 source=$2
-    local cmd=""
-    if [ "$source" = "disk" ]; then
-        cmd="awk '/^ *-a *always,exit/ && / -F *arch=b(32|64)/ && / -F *auid!=(unset|-1|4294967295)/ && / -S/ && (/(init_module|finit_module|delete_module|create_module|query_module)/) && / key=kernel_modules/{print \$0}' /etc/audit/rules.d/*.rules"
+# Logika untuk auid!=unset/4294967295/-1
+# Ini adalah bagian dari regex umum untuk memastikan auid diverifikasi,
+# yang merupakan persyaratan umum untuk aturan audit pengguna.
+AU_ID_CHECK="(/ -F auid!=unset/ || / -F auid!=-1/ || / -F auid!=4294967295/)"
+# ------------------------------------
+
+# ==============================================================================
+# SUB-CHECK 1: Memeriksa Aturan Audit Modul Kernel di Disk (Harus ditemukan 2)
+# ==============================================================================
+f_check_disk_rules() {
+    local L_OUTPUT_SC=""
+    local L_OUTPUT_KMOD=""
+    local FOUND_COUNT=0
+    local NOTE_DETAIL="Disk Rules: "
+
+    # Target 1: Aturan Panggilan Sistem (Syscalls)
+    # Mencari aturan yang mencakup syscalls modul dan arch=b(32|64), auid>=UID_MIN, key=
+    L_OUTPUT_SC=$(
+        awk "
+        /^\s*-a *always,exit/ &&
+        / -F *arch=b(32|64)/ &&
+        / -F *auid>=\s*${UID_MIN}/ &&
+        ${AU_ID_CHECK} &&
+        / -S/ &&
+        /${AUDIT_TARGET_SYSCALLS}/ &&
+        (/ key= *[!-~]* *$/ || / -k *[!-~]* *$/)
+        " /etc/audit/rules.d/*.rules
+    )
+
+    # Target 2: Aturan Eksekusi kmod
+    # Mencari aturan yang mencakup path=/usr/bin/kmod, perm=x, auid>=UID_MIN, key=
+    L_OUTPUT_KMOD=$(
+        awk "
+        /^\s*-a *always,exit/ &&
+        / -F *auid>=\s*${UID_MIN}/ &&
+        ${AU_ID_CHECK} &&
+        / -F *perm=x/ &&
+        / -F *path=\/usr\/bin\/kmod/ &&
+        (/ key= *[!-~]* *$/ || / -k *[!-~]* *$/)
+        " /etc/audit/rules.d/*.rules
+    )
+
+    # Logika Hitung (Diharapkan 2 aturan)
+    # Kita hanya menghitung apakah pola untuk Syscalls dan pola untuk kmod path ditemukan setidaknya satu kali
+    if [ -n "$L_OUTPUT_SC" ]; then
+        FOUND_COUNT=$((FOUND_COUNT + 1))
+        NOTE_DETAIL+="Syscall(OK) "
     else
-        cmd="auditctl -l | awk '/^ *-a *always,exit/ && / -F *arch=b(32|64)/ && / -F *auid!=(unset|-1|4294967295)/ && / -S/ && (/(init_module|finit_module|delete_module|create_module|query_module)/) && / key=kernel_modules/{print \$0}'"
+        NOTE_DETAIL+="Syscall(MISSING) "
     fi
-    L_OUTPUT=$(eval "$cmd" 2>/dev/null)
-    local found_count=0
-    for arch in "${ARCHS[@]}"; do
-        if echo "$L_OUTPUT" | grep -q "arch=b${arch/b/}" && echo "$L_OUTPUT" | grep -q "key=kernel_modules"; then
-            found_count=$((found_count + 1))
+
+    if [ -n "$L_OUTPUT_KMOD" ]; then
+        FOUND_COUNT=$((FOUND_COUNT + 1))
+        NOTE_DETAIL+="kmod_Path(OK) "
+    else
+        NOTE_DETAIL+="kmod_Path(MISSING) "
+    fi
+
+    if [ "$FOUND_COUNT" -ge 2 ]; then
+        CHECK_1_RESULT="PASS"
+        NOTES+="[DISK: PASS] $NOTE_DETAIL | "
+    else
+        NOTES+="[DISK: FAIL] $NOTE_DETAIL | "
+    fi
+}
+
+# ==============================================================================
+# SUB-CHECK 2: Memeriksa Aturan Audit Modul Kernel yang Dimuat (Harus ditemukan 2)
+# ==============================================================================
+f_check_loaded_rules() {
+    local L_OUTPUT_SC=""
+    local L_OUTPUT_KMOD=""
+    local FOUND_COUNT=0
+    local NOTE_DETAIL="Loaded Rules: "
+
+    # Ambil semua aturan yang dimuat
+    local ALL_LOADED_RULES=$(auditctl -l 2>/dev/null)
+
+    if [ -z "$ALL_LOADED_RULES" ]; then
+        NOTES+="[LOADED: FAIL] Auditctl gagal membaca aturan. | "
+        return
+    fi
+
+    # Target 1: Aturan Panggilan Sistem (Syscalls)
+    L_OUTPUT_SC=$(
+        echo "$ALL_LOADED_RULES" | awk "
+        /^\s*-a *always,exit/ &&
+        / -F *arch=b(32|64)/ &&
+        / -F *auid>=\s*${UID_MIN}/ &&
+        ${AU_ID_CHECK} &&
+        / -S/ &&
+        /${AUDIT_TARGET_SYSCALLS}/ &&
+        (/ key= *[!-~]* *$/ || / -k *[!-~]* *$/)
+        "
+    )
+
+    # Target 2: Aturan Eksekusi kmod
+    # Catatan: Aturan yang dimuat mungkin tidak menyertakan AU_ID_CHECK jika hanya menggunakan -F auid>=1000
+    L_OUTPUT_KMOD=$(
+        echo "$ALL_LOADED_RULES" | awk "
+        /^\s*-a *always,exit/ &&
+        / -F *auid>=\s*${UID_MIN}/ &&
+        / -F *perm=x/ &&
+        / -F *path=\/usr\/bin\/kmod/ &&
+        (/ key= *[!-~]* *$/ || / -k *[!-~]* *$/)
+        "
+    )
+
+    # Logika Hitung (Diharapkan 2 aturan)
+    if [ -n "$L_OUTPUT_SC" ]; then
+        FOUND_COUNT=$((FOUND_COUNT + 1))
+        NOTE_DETAIL+="Syscall(OK) "
+    else
+        NOTE_DETAIL+="Syscall(MISSING) "
+    fi
+
+    if [ -n "$L_OUTPUT_KMOD" ]; then
+        FOUND_COUNT=$((FOUND_COUNT + 1))
+        NOTE_DETAIL+="kmod_Path(OK) "
+    else
+        NOTE_DETAIL+="kmod_Path(MISSING) "
+    fi
+
+    if [ "$FOUND_COUNT" -ge 2 ]; then
+        CHECK_2_RESULT="PASS"
+        NOTES+="[LOADED: PASS] $NOTE_DETAIL | "
+    else
+        NOTES+="[LOADED: FAIL] $NOTE_DETAIL | "
+    fi
+}
+
+# ==============================================================================
+# SUB-CHECK 3: Memeriksa Symlink Program Modul
+# ==============================================================================
+f_check_symlinks() {
+    local a_files=("/usr/sbin/lsmod" "/usr/sbin/rmmod" "/usr/sbin/insmod" "/usr/sbin/modinfo" "/usr/sbin/modprobe" "/usr/sbin/depmod")
+    local target_kmod_path="$(readlink -f /bin/kmod 2>/dev/null)"
+    local ISSUES_FOUND=0
+    local NOTE_DETAIL="Symlinks: "
+
+    if [ -z "$target_kmod_path" ]; then
+        NOTES+="[SYMLINK: FAIL] Path target /bin/kmod tidak ditemukan. | "
+        return
+    fi
+
+    for l_file in "${a_files[@]}"; do
+        if [ "$(readlink -f "$l_file" 2>/dev/null)" = "$target_kmod_path" ]; then
+            NOTE_DETAIL+="($l_file: OK) "
+        else
+            ISSUES_FOUND=1
+            NOTE_DETAIL+="($l_file: Issue) "
         fi
     done
-    return $found_count
-}
 
-# Fungsi bantu untuk cek kmod path
-f_check_kmod() {
-    local type=$1 source=$2
-    local cmd=""
-    if [ "$source" = "disk" ]; then
-        cmd="awk '/^ *-a *always,exit/ && / -F *auid>=${L_UID_MIN}/ && / -F *perm=x/ && / -F *path=${KMOD_PATH}/ && / key=kernel_modules/{print \$0}' /etc/audit/rules.d/*.rules"
+    if [ "$ISSUES_FOUND" -eq 0 ]; then
+        CHECK_3_RESULT="PASS"
+        NOTES+="[SYMLINK: PASS] $NOTE_DETAIL"
     else
-        cmd="auditctl -l | awk '/^ *-a *always,exit/ && / -F *auid>=${L_UID_MIN}/ && / -F *perm=x/ && / -F *path=${KMOD_PATH}/ && / key=kernel_modules/{print \$0}'"
-    fi
-    L_OUTPUT=$(eval "$cmd" 2>/dev/null)
-    if [ -n "$L_OUTPUT" ] && echo "$L_OUTPUT" | grep -q "path=$KMOD_PATH" && echo "$L_OUTPUT" | grep -q "key=kernel_modules"; then
-        a_output+=(" - $type: kmod path rule found.")
-        return 1
-    else
-        a_output2+=(" - $type: kmod path rule MISSING or incorrect.")
-        return 0
+        NOTES+="[SYMLINK: FAIL] $NOTE_DETAIL"
     fi
 }
 
-# Run Checks
-FOUND_SYSCALL_DISK=$(f_check_syscalls "Disk" "disk")
-FOUND_KMOD_DISK=$(f_check_kmod "Disk" "disk")
-FOUND_SYSCALL_LOADED=$(f_check_syscalls "Loaded" "loaded")
-FOUND_KMOD_LOADED=$(f_check_kmod "Loaded" "loaded")
+# --- Jalankan Semua Pemeriksaan ---
+f_check_disk_rules
+f_check_loaded_rules
+f_check_symlinks
 
-if [ "$FOUND_SYSCALL_DISK" -eq "$EXPECTED_SYSCALL_RULES" ] && [ "$FOUND_KMOD_DISK" -eq 1 ]; then
-    a_output+=(" - Disk: All required kernel module rules found.")
+# --- Logika Penentuan Hasil Akhir ---
+if [ "$CHECK_1_RESULT" = "PASS" ] && [ "$CHECK_2_RESULT" = "PASS" ] && [ "$CHECK_3_RESULT" = "PASS" ]; then
+    RESULT="PASS"
 else
     RESULT="FAIL"
-    a_output2+=(" - Disk: Kernel module syscalls ($FOUND_SYSCALL_DISK/$EXPECTED_SYSCALL_RULES) or kmod path ($FOUND_KMOD_DISK/1) rules missing/incorrect.")
 fi
 
-if [ "$FOUND_SYSCALL_LOADED" -eq "$EXPECTED_SYSCALL_RULES" ] && [ "$FOUND_KMOD_LOADED" -eq 1 ]; then
-    a_output+=(" - Loaded: All required kernel module rules found.")
-else
-    RESULT="FAIL"
-    a_output2+=(" - Loaded: Kernel module syscalls ($FOUND_SYSCALL_LOADED/$EXPECTED_SYSCALL_RULES) or kmod path ($FOUND_KMOD_LOADED/1) rules missing/incorrect.")
-fi
-
-# --- Cek Symlink (Tambahan) ---
-a_files=("/usr/sbin/lsmod" "/usr/sbin/rmmod" "/usr/sbin/insmod" "/usr/sbin/modinfo" "/usr/sbin/modprobe" "/usr/sbin/depmod")
-for l_file in "${a_files[@]}"; do
-    if [ "$(readlink -f "$l_file" 2>/dev/null)" = "$(readlink -f /bin/kmod 2>/dev/null)" ]; then
-        a_output+=(" - Symlink OK: \"$l_file\" points to kmod.")
-    else
-        a_output2+=(" - Symlink Issue: \"$l_file\" does not point to kmod. Investigation required.")
-        RESULT="FAIL"
-    fi
-done
-
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "${#a_output2[@]}" -le 0 ]; then
-    NOTES+="PASS: All required kernel module rules and symlinks are correct. ${a_output[*]}"
-else
-    NOTES+="FAIL: Kernel module auditing or symlinks failed. ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
-fi
-
+# --- Format Output CSV ---
+# Bersihkan catatan dari baris baru
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
 echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
-}
