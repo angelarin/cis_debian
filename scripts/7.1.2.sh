@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.1.2"
-DESCRIPTION="Ensure permissions on /etc/passwd- are configured (mode <= 644, owner:root:root)"
+DESCRIPTION="Ensure permissions on /etc/passwd- are configured (mode <= 644 owner:root:root)"
 # -----------------------------------------------------
 
 {

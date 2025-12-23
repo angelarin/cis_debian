@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.2.9"
-DESCRIPTION="Ensure local interactive user home directories are configured (exist, owner, mode <= 750)"
+DESCRIPTION="Ensure local interactive user home directories are configured (exist owner mode <= 750)"
 # -----------------------------------------------------
 
 {

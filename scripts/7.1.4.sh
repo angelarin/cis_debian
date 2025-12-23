@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.1.4"
-DESCRIPTION="Ensure permissions on /etc/group- are configured (mode <= 644, owner:root:root)"
+DESCRIPTION="Ensure permissions on /etc/group- are configured (mode <= 644 owner:root:root)"
 # -----------------------------------------------------
 
 {

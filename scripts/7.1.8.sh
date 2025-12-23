@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.1.8"
-DESCRIPTION="Ensure permissions on /etc/gshadow- are configured (mode <= 640, owner:root, group:root|shadow)"
+DESCRIPTION="Ensure permissions on /etc/gshadow- are configured (mode <= 640 owner:root group:root shadow)"
 # -----------------------------------------------------
 
 {

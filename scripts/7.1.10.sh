@@ -2,7 +2,7 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.1.10"
-DESCRIPTION="Ensure permissions on /etc/security/opasswd are configured (mode <= 600, owner:root:root)"
+DESCRIPTION="Ensure permissions on /etc/security/opasswd are configured (mode <= 600 owner:root:root)"
 # -----------------------------------------------------
 
 {
