@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
+# --- ID dan Deskripsi ---
 CHECK_ID="7.1.2"
 DESCRIPTION="Ensure permissions on /etc/passwd- are configured (mode <= 644 owner:root:root)"
-# -----------------------------------------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
@@ -12,8 +11,9 @@ EXPECTED_MODE=0644
 EXPECTED_UID=0
 EXPECTED_GID=0
 
-# --- FUNGSI AUDIT FILE PERMISSIONS ---
+# --- FUNGSI AUDIT ---
 if [ ! -f "$TARGET_FILE" ]; then
+    # File ini opsional di beberapa distro, tapi CIS Debian mewajibkannya jika ada
     a_output2+=(" - $TARGET_FILE is missing.")
     RESULT="FAIL"
 else
@@ -33,15 +33,16 @@ else
     fi
 
     # 2. Cek izin (644 atau lebih ketat)
-    if [ "$(printf "%o" "$L_ACCESS_OCTAL")" -le "$EXPECTED_MODE" ]; then
-        a_output+=(" - Access ($L_ACCESS_OCTAL) is set to $EXPECTED_MODE or more restrictive.")
+    # Penjelasan: $((0$L_ACCESS_OCTAL)) memaksa Bash membaca input sebagai octal
+    if [ "$((0$L_ACCESS_OCTAL))" -le "$((EXPECTED_MODE))" ]; then
+        a_output+=(" - Access ($L_ACCESS_OCTAL) is correct (<= 644).")
     else
-        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than $EXPECTED_MODE.")
+        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than 644.")
         RESULT="FAIL"
     fi
 fi
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
+# --- LOGIKA OUTPUT ---
 if [ "${#a_output2[@]}" -le 0 ]; then
     NOTES+="PASS: ${a_output[*]}"
 else
@@ -49,6 +50,7 @@ else
     [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
 fi
 
+# Membersihkan spasi ganda atau karakter aneh
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
 echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
 }
