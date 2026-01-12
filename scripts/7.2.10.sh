@@ -76,7 +76,7 @@ for user_home in "${a_user_and_home[@]}"; do
                 [ -n "$ACCESS_ISSUES" ] && a_hdirout+=("${ACCESS_ISSUES//$'\n'/ | }")
                 ;;
             esac
-        done < <(find "$l_home" -xdev -type f -name '.*' -print0 2>/dev/null)
+        done < <(find "$l_home" -maxdepth 1 -xdev -type f -name '.*' -print0 2>/dev/null)
     fi # end if -d $l_home
 
     # Kumpulkan semua pelanggaran
