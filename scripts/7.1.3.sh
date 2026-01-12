@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
+# --- ID dan Deskripsi ---
 CHECK_ID="7.1.3"
 DESCRIPTION="Ensure permissions on /etc/group are configured (mode <= 644 owner:root:root)"
-# -----------------------------------------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
@@ -12,7 +11,7 @@ EXPECTED_MODE=0644
 EXPECTED_UID=0
 EXPECTED_GID=0
 
-# --- FUNGSI AUDIT FILE PERMISSIONS ---
+# --- FUNGSI AUDIT ---
 if [ ! -f "$TARGET_FILE" ]; then
     a_output2+=(" - $TARGET_FILE is missing.")
     RESULT="FAIL"
@@ -33,15 +32,16 @@ else
     fi
 
     # 2. Cek izin (644 atau lebih ketat)
-    if [ "$(printf "%o" "$L_ACCESS_OCTAL")" -le "$EXPECTED_MODE" ]; then
-        a_output+=(" - Access ($L_ACCESS_OCTAL) is set to $EXPECTED_MODE or more restrictive.")
+    # Kita gunakan $((0...)) untuk memastikan Bash memperlakukan variabel sebagai OKTAL
+    if [ "$((0$L_ACCESS_OCTAL))" -le "$((EXPECTED_MODE))" ]; then
+        a_output+=(" - Access ($L_ACCESS_OCTAL) is correct.")
     else
-        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than $EXPECTED_MODE.")
+        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than 0644.")
         RESULT="FAIL"
     fi
 fi
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
+# --- LOGIKA OUTPUT ---
 if [ "${#a_output2[@]}" -le 0 ]; then
     NOTES+="PASS: ${a_output[*]}"
 else
