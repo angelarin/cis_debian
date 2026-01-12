@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
+# --- ID dan Deskripsi ---
 CHECK_ID="7.1.6"
-DESCRIPTION="Ensure permissions on /etc/shadow- are configured (mode <= 640 owner:root group:root shadow)"
-# -----------------------------------------------------
+DESCRIPTION="Ensure permissions on /etc/shadow- are configured (mode <= 640 owner:root group:root/shadow)"
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
@@ -12,7 +11,6 @@ EXPECTED_MODE=0640
 EXPECTED_UID=0
 EXPECTED_GROUPS=("root" "shadow")
 
-# --- FUNGSI AUDIT FILE PERMISSIONS ---
 if [ ! -f "$TARGET_FILE" ]; then
     a_output2+=(" - $TARGET_FILE is missing.")
     RESULT="FAIL"
@@ -33,13 +31,14 @@ else
     fi
 
     # 2. Cek grup pemilik (GID)
-    local group_match=0
+    group_match=0
     for g in "${EXPECTED_GROUPS[@]}"; do
         if [ "$L_GROUP" = "$g" ]; then
             group_match=1
             break
         fi
     done
+
     if [ "$group_match" -eq 1 ]; then
         a_output+=(" - Group ($L_GROUP) is correctly set to root or shadow.")
     else
@@ -48,15 +47,16 @@ else
     fi
 
     # 3. Cek izin (640 atau lebih ketat)
-    if [ "$(printf "%o" "$L_ACCESS_OCTAL")" -le "$EXPECTED_MODE" ]; then
-        a_output+=(" - Access ($L_ACCESS_OCTAL) is set to $EXPECTED_MODE or more restrictive.")
+    # Gunakan $((0$VAR)) untuk memastikan perbandingan oktal yang benar
+    if [ "$((0$L_ACCESS_OCTAL))" -le "$((EXPECTED_MODE))" ]; then
+        a_output+=(" - Access ($L_ACCESS_OCTAL) is correct.")
     else
-        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than $EXPECTED_MODE.")
+        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than 0640.")
         RESULT="FAIL"
     fi
 fi
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
+# Logika Output
 if [ "${#a_output2[@]}" -le 0 ]; then
     NOTES+="PASS: ${a_output[*]}"
 else

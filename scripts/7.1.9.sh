@@ -3,7 +3,6 @@
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.1.9"
 DESCRIPTION="Ensure permissions on /etc/shells are configured (mode <= 644 owner:root:root)"
-# -----------------------------------------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
@@ -33,10 +32,11 @@ else
     fi
 
     # 2. Cek izin (644 atau lebih ketat)
-    if [ "$(printf "%o" "$L_ACCESS_OCTAL")" -le "$EXPECTED_MODE" ]; then
-        a_output+=(" - Access ($L_ACCESS_OCTAL) is set to $EXPECTED_MODE or more restrictive.")
+    # Trik $((0$L_ACCESS_OCTAL)) memastikan perbandingan dilakukan dalam basis oktal yang sama
+    if [ "$((0$L_ACCESS_OCTAL))" -le "$((EXPECTED_MODE))" ]; then
+        a_output+=(" - Access ($L_ACCESS_OCTAL) is correct.")
     else
-        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than $EXPECTED_MODE.")
+        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than 0644.")
         RESULT="FAIL"
     fi
 fi
