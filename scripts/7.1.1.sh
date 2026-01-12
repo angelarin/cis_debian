@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="7.1.1"
 DESCRIPTION="Ensure permissions on /etc/passwd are configured (mode <= 644 owner:root:root)"
-# -----------------------------------------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
 TARGET_FILE="/etc/passwd"
-EXPECTED_MODE=0644
+# Kita simpan dalam bentuk string octal untuk pelaporan
+EXPECTED_MODE="644" 
 EXPECTED_UID=0
 EXPECTED_GID=0
 
-# --- FUNGSI AUDIT FILE PERMISSIONS ---
 if [ ! -f "$TARGET_FILE" ]; then
     a_output2+=(" - $TARGET_FILE is missing.")
     RESULT="FAIL"
@@ -33,15 +31,16 @@ else
     fi
 
     # 2. Cek izin (644 atau lebih ketat)
-    if [ "$(printf "%o" "$L_ACCESS_OCTAL")" -le "$EXPECTED_MODE" ]; then
-        a_output+=(" - Access ($L_ACCESS_OCTAL) is set to $EXPECTED_MODE or more restrictive.")
+    # Menggunakan prefix 0o untuk Bash modern atau 0 untuk memaksa interpretasi octal
+    if [ "$((0$L_ACCESS_OCTAL))" -le "$((0644))" ]; then
+        a_output+=(" - Access ($L_ACCESS_OCTAL) is correct.")
     else
-        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than $EXPECTED_MODE.")
+        a_output2+=(" - Access ($L_ACCESS_OCTAL) is less restrictive than 0644.")
         RESULT="FAIL"
     fi
 fi
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
+# Logika Output
 if [ "${#a_output2[@]}" -le 0 ]; then
     NOTES+="PASS: ${a_output[*]}"
 else
