@@ -1,37 +1,44 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="4.3.5"
-DESCRIPTION="Ensure nftables base chains exist"
-# -----------------------------------------------------
+CHECK_ID="4.3.6"
+DESCRIPTION="Ensure nftables loopback traffic is configured"
 
 {
-a_output=() a_output2=() RESULT="PASS" NOTES=""
-REQUIRED_HOOKS=("input" "forward" "output")
+a_output=() a_output2=() RESULT="" NOTES=""
 
-# --- FUNGSI AUDIT BASE CHAINS ---
+# Ambil Ruleset saat ini
 L_RULESET=$(nft list ruleset 2>/dev/null)
 
-if [ -z "$L_RULESET" ]; then
-    RESULT="FAIL"
-    a_output2+=(" - nftables ruleset is empty. No base chains can be checked.")
+# 1. Cek Loopback Interface Accept (iif "lo" accept)
+if echo "$L_RULESET" | awk '/hook input/,/}/' | grep -q 'iif "lo" accept'; then
+    a_output+=("Loopback interface is configured to ACCEPT traffic.")
 else
-    for hook in "${REQUIRED_HOOKS[@]}"; do
-        if echo "$L_RULESET" | grep -q "hook $hook"; then
-            a_output+=(" - Base chain with 'hook $hook' found.")
-        else
-            RESULT="FAIL"
-            a_output2+=(" - Base chain with 'hook $hook' is MISSING from the ruleset.")
-        fi
-    done
+    a_output2+=("Loopback interface ACCEPT rule is MISSING.")
 fi
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
+# 2. Cek IPv4 Loopback Spoofing Drop (127.0.0.0/8 drop)
+if echo "$L_RULESET" | awk '/hook input/,/}/' | grep -q 'ip saddr 127.0.0.0/8.*drop'; then
+    a_output+=("IPv4 loopback spoofing is configured to DROP.")
+else
+    a_output2+=("IPv4 loopback spoofing DROP rule is MISSING.")
+fi
+
+# 3. Cek IPv6 Loopback Spoofing Drop (::1 drop) - Jika IPv6 aktif
+if [ -f /proc/net/if_inet6 ]; then
+    if echo "$L_RULESET" | awk '/hook input/,/}/' | grep -q 'ip6 saddr ::1.*drop'; then
+        a_output+=("IPv6 loopback spoofing is configured to DROP.")
+    else
+        a_output2+=("IPv6 loopback spoofing DROP rule is MISSING.")
+    fi
+fi
+
+# --- LOGIKA OUTPUT ---
 if [ "${#a_output2[@]}" -le 0 ]; then
+    RESULT="PASS"
     NOTES+="PASS: ${a_output[*]}"
 else
-    NOTES+="FAIL: Reason(s) for audit failure: ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    RESULT="FAIL"
+    NOTES+="FAIL: Reason(s): ${a_output2[*]}"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
