@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.5.9"
+CHECK_ID="v2 1.5.9"
 DESCRIPTION="Ensure kernel.randomize_va_space is configured"
 # -----------------------------------------------------
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.2.1"
+CHECK_ID="v2 3.2.1"
 DESCRIPTION="Ensure atm kernel module is not available"
 # -----------------------------------------------------
 

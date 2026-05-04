@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="4.1.4"
+CHECK_ID="v2 4.1.4"
 DESCRIPTION="Ensure ufw outgoing default is configured"
 # -----------------------------------------------------
 

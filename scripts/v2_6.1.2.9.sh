@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.2.9"
+CHECK_ID="v2 6.1.2.9"
 DESCRIPTION="Ensure rsyslog-gnutls is installed"
 # -----------------------------------------------------
 

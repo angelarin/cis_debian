@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.5.7"
+CHECK_ID="v2 1.5.7"
 DESCRIPTION="Ensure Automatic Error Reporting is configured"
 # -----------------------------------------------------
 

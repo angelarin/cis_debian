@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="5.1.13"
+CHECK_ID="v2 5.1.13"
 DESCRIPTION="Ensure sshd post-quantum cryptography key exchange algorithms are configured"
 # -----------------------------------------------------
 

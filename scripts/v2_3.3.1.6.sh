@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.3.1.6"
+CHECK_ID="v2 3.3.1.6"
 DESCRIPTION="Ensure net.ipv4.icmp_ignore_bogus_error_responses is configured"
 # -----------------------------------------------------
 

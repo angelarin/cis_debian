@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.2.2"
+CHECK_ID="v2 3.2.2"
 DESCRIPTION="Ensure can kernel module is not available"
 # -----------------------------------------------------
 

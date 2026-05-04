@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.2.1.9"
+CHECK_ID="v2 1.2.1.9"
 DESCRIPTION="Ensure access to files in /etc/apt/sources.list.d are configured"
 # -----------------------------------------------------
 

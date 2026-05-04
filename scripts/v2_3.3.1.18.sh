@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.3.1.18"
+CHECK_ID="v2 3.3.1.18"
 DESCRIPTION="Ensure net.ipv4.tcp_syncookies is configured"
 # -----------------------------------------------------
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="2.1.16"
+CHECK_ID="v2 2.1.16"
 DESCRIPTION="Ensure telnet-server services are not in use"
 # -----------------------------------------------------
 

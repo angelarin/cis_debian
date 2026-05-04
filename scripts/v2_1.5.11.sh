@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.5.11"
+CHECK_ID="v2 1.5.11"
 DESCRIPTION="Ensure core file size is configured"
 # -----------------------------------------------------
 

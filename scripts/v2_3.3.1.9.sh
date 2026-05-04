@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.3.1.9"
+CHECK_ID="v2 3.3.1.9"
 DESCRIPTION="Ensure net.ipv4.conf.default.accept_redirects is configured"
 # -----------------------------------------------------
 

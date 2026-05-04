@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.1.1.9"
+CHECK_ID="v2 1.1.1.9"
 DESCRIPTION="Ensure firewire-core kernel module is not available"
 # -----------------------------------------------------
 

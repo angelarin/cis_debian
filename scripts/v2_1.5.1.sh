@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.5.1"
+CHECK_ID="v2 1.5.1"
 DESCRIPTION="Ensure fs.protected_hardlinks is configured"
 # -----------------------------------------------------
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.5.4"
+CHECK_ID="v2 1.5.4"
 DESCRIPTION="Ensure fs.suid_dumpable is configured"
 # -----------------------------------------------------
 

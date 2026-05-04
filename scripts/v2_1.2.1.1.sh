@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.2.1.1"
+CHECK_ID="v2 1.2.1.1"
 DESCRIPTION="Ensure the source.list and .source files use the Signed-By option"
 # -----------------------------------------------------
 

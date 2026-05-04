@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.3.2.8"
+CHECK_ID="v2 3.3.2.8"
 DESCRIPTION="Ensure net.ipv6.conf.default.accept_ra is configured"
 # -----------------------------------------------------
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="1.2.1.6"
+CHECK_ID="v2 1.2.1.6"
 DESCRIPTION="Ensure access to files in the /etc/apt/auth.conf.d/ directory is configured"
 # -----------------------------------------------------
 

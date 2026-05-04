@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="2.4.1.7"
+CHECK_ID="v2 2.4.1.7"
 DESCRIPTION="Ensure access to /etc/cron.yearly is configured"
 # -----------------------------------------------------
 
