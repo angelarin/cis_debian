@@ -1,40 +1,40 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="6.2.3.20"
-DESCRIPTION="Ensure the audit configuration is immutable"
-# -----------------------------------------------------
+DESCRIPTION="Ensure discretionary access control permission modification events setxattr,lsetxattr... collected"
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
-EXPECTED_RULE="-e 2"
 
-# 1. Cek konfigurasi On Disk (aturan terakhir)
-L_OUTPUT_DISK=$(grep -Ph -- '^\h*-e\h+2\b' /etc/audit/rules.d/*.rules 2>/dev/null | tail -1)
+UID_MIN=$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs 2>/dev/null)
+[ -z "$UID_MIN" ] && UID_MIN=1000
 
-if [ "$L_OUTPUT_DISK" = "$EXPECTED_RULE" ]; then
-    a_output+=(" - Disk: Immutable rule ($EXPECTED_RULE) found as the last rule in rules.d.")
+f_check_xattr() {
+    local type=$1 output="$2"
+    if echo "$output" | grep -q "xattr" && \
+       echo "$output" | grep -q "auid>=${UID_MIN}" && \
+       echo "$output" | grep -Eq "(auid!=unset|auid!=-1|auid!=4294967295)"; then
+        a_output+=(" - $type: xattr rules found.")
+        return 1
+    else
+        a_output2+=(" - $type: xattr rules missing or incomplete.")
+        return 0
+    fi
+}
+
+RUNNING=$(auditctl -l 2>/dev/null | grep -Ps -- 'xattr')
+f_check_xattr "loaded" "$RUNNING"
+LOADED_OK=$?
+
+DISK=$(grep -hPs -- 'xattr' /etc/audit/rules.d/*.rules 2>/dev/null)
+f_check_xattr "disk" "$DISK"
+DISK_OK=$?
+
+if [ "$LOADED_OK" -eq 1 ] && [ "$DISK_OK" -eq 1 ]; then
+    NOTES+="PASS: Rules found using UID_MIN=${UID_MIN}. ${a_output[*]}"
 else
     RESULT="FAIL"
-    a_output2+=(" - Disk: Immutable rule ($EXPECTED_RULE) is MISSING or is not the last rule.")
-fi
-
-# 2. Cek konfigurasi Loaded (aturan terakhir)
-L_OUTPUT_LOADED=$(auditctl -l 2>/dev/null | grep -Ph -- '^\h*-e\h+2\b' | tail -1)
-
-if [ "$L_OUTPUT_LOADED" = "$EXPECTED_RULE" ]; then
-    a_output+=(" - Loaded: Immutable rule ($EXPECTED_RULE) found in the running configuration.")
-else
-    RESULT="FAIL"
-    a_output2+=(" - Loaded: Immutable rule ($EXPECTED_RULE) is MISSING from the running configuration.")
-fi
-
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "${#a_output2[@]}" -le 0 ]; then
-    NOTES+="PASS: ${a_output[*]}"
-else
-    NOTES+="FAIL: Immutable configuration rule failed. ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    NOTES+="FAIL: Missing rules. ${a_output2[*]}"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')

@@ -1,65 +1,44 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="6.2.3.11"
-DESCRIPTION="Ensure session initiation information is collected"
-# -----------------------------------------------------
+DESCRIPTION="Ensure unsuccessful file access attempts are collected"
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
-TARGET_FILES=("/var/run/utmp" "/var/log/wtmp" "/var/log/btmp")
-EXPECTED_TOTAL=3
-FOUND_COUNT_DISK=0
-FOUND_COUNT_LOADED=0
 
-# --- FUNGSI AUDIT FILE MODIFICATION ---
-f_check_files_modification() {
-    local type=$1 source=$2
-    local found_count=0
-    
-    for target in "${TARGET_FILES[@]}"; do
-        # PERBAIKAN ESCAPING
-        local escaped_target=$(echo "$target" | sed 's/\//\\\//g')
-        local cmd=""
-        
-        # PERBAIKAN AWK QUERY (menambahkan opsi ||/ -k ... /)
-        if [ "$source" = "disk" ]; then
-            cmd="awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}' /etc/audit/rules.d/*.rules"
-        else
-            cmd="sudo auditctl -l | awk '/^ *-w/ && /${escaped_target}/ && / +-p *wa/ && (/ key= *[!-~]* *$/||/ -k *[!-~]* *$/){print \$0}'"
-        fi
-        
-        # NOTE: Menambahkan sudo pada auditctl di sini karena biasanya butuh root.
-        
-        L_OUTPUT=$(eval "$cmd" 2>/dev/null)
-        
-        # Memastikan output valid dan mengandung key=session (walaupun key=session sudah dicari oleh awk)
-        if [ -n "$L_OUTPUT" ]; then 
-            a_output+=(" - $type: Rule for $target found.")
-            found_count=$((found_count + 1))
-        else
-            a_output2+=(" - $type: Rule for $target is MISSING.")
-        fi
-    done
-    
-    return $found_count
+# Mendapatkan UID_MIN dari /etc/login.defs (default biasanya 1000)
+UID_MIN=$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs)
+[ -z "$UID_MIN" ] && UID_MIN=1000
+
+f_check_access() {
+    local type=$1 output="$2"
+    local eacces=0 eperm=0
+
+    if echo "$output" | grep -q "exit=-EACCES" && echo "$output" | grep -q "auid>=${UID_MIN}"; then eacces=1; fi
+    if echo "$output" | grep -q "exit=-EPERM" && echo "$output" | grep -q "auid>=${UID_MIN}"; then eperm=1; fi
+
+    if [ "$eacces" -eq 1 ] && [ "$eperm" -eq 1 ]; then
+        a_output+=(" - $type: Unsuccessful file access rules found.")
+        return 1
+    else
+        a_output2+=(" - $type: Unsuccessful file access rules missing/incomplete.")
+        return 0
+    fi
 }
 
-# PERBAIKAN PEMANGGILAN FUNGSI (Menggunakan $? untuk return code)
-f_check_files_modification "Disk" "disk"
-FOUND_COUNT_DISK=$?
+RUNNING=$(auditctl -l 2>/dev/null | grep -Ps -- '(EACCES|EPERM)')
+f_check_access "loaded" "$RUNNING"
+LOADED_OK=$?
 
-f_check_files_modification "Loaded" "loaded"
-FOUND_COUNT_LOADED=$?
+DISK=$(grep -hPs -- '(EACCES|EPERM)' /etc/audit/rules.d/*.rules 2>/dev/null)
+f_check_access "disk" "$DISK"
+DISK_OK=$?
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "$FOUND_COUNT_DISK" -eq "$EXPECTED_TOTAL" ] && [ "$FOUND_COUNT_LOADED" -eq "$EXPECTED_TOTAL" ]; then
-    RESULT="PASS"
-    NOTES+="PASS: All $EXPECTED_TOTAL rules found (Disk and Loaded). ${a_output[*]}"
+if [ "$LOADED_OK" -eq 1 ] && [ "$DISK_OK" -eq 1 ]; then
+    NOTES+="PASS: Rules found using UID_MIN=${UID_MIN}. ${a_output[*]}"
 else
     RESULT="FAIL"
-    NOTES+="FAIL: Session auditing failed (Disk: $FOUND_COUNT_DISK/$EXPECTED_TOTAL, Loaded: $FOUND_COUNT_LOADED/$EXPECTED_TOTAL). ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    NOTES+="FAIL: Missing rules. ${a_output2[*]}"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')

@@ -1,43 +1,40 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="6.2.3.21"
-DESCRIPTION="Ensure the running and on disk configuration is the same (Manual Review)"
-# -----------------------------------------------------
+DESCRIPTION="Ensure successful file system mounts are collected"
 
 {
-a_output=() a_output2=() RESULT="REVIEW" NOTES=""
-COMMAND="augenrules --check"
-EXPECTED_OUTPUT="No change"
+a_output=() a_output2=() RESULT="PASS" NOTES=""
 
-# --- FUNGSI AUDIT AUGENRULES CHECK ---
-L_OUTPUT=$($COMMAND 2>&1)
-L_EXIT_CODE=$?
+UID_MIN=$(awk '/^\s*UID_MIN/{print $2}' /etc/login.defs 2>/dev/null)
+[ -z "$UID_MIN" ] && UID_MIN=1000
 
-if [ $L_EXIT_CODE -eq 0 ]; then
-    if echo "$L_OUTPUT" | grep -q "$EXPECTED_OUTPUT"; then
-        a_output+=(" - $COMMAND completed successfully. Output: $L_OUTPUT")
-        a_output+=(" - The rules on disk and the merged file appear to be synchronized ('$EXPECTED_OUTPUT' returned).")
-        RESULT="PASS"
+f_check_mount() {
+    local type=$1 output="$2"
+    if echo "$output" | grep -q "mount" && \
+       echo "$output" | grep -q "auid>=${UID_MIN}" && \
+       echo "$output" | grep -Eq "(auid!=unset|auid!=-1|auid!=4294967295)"; then
+        a_output+=(" - $type: mount rule found.")
+        return 1
     else
-        # Jika exit code 0 tapi output tidak 'No change' (misal, ada warning lain)
-        a_output2+=(" - $COMMAND completed, but rules appear to be different (Output suggests drift). Output: $L_OUTPUT")
-        a_output2+=(" - Remediasi: Run 'augenrules --load' (requires root/sudo).")
-        RESULT="FAIL"
+        a_output2+=(" - $type: mount rule missing or incomplete.")
+        return 0
     fi
-else
-    # Jika exit code non-0 (misal, error atau drift parah)
-    a_output2+=(" - $COMMAND failed to execute or returned a non-zero exit code ($L_EXIT_CODE). Check auditd package/status.")
-    a_output2+=(" - Full Output: $L_OUTPUT")
-    RESULT="FAIL"
-fi
+}
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "$RESULT" == "FAIL" ]; then
-    NOTES+="FAIL: Configuration drift detected or check failed. ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+RUNNING=$(auditctl -l 2>/dev/null | grep -Ps -- '\-S mount')
+f_check_mount "loaded" "$RUNNING"
+LOADED_OK=$?
+
+DISK=$(grep -hPs -- '\-S mount' /etc/audit/rules.d/*.rules 2>/dev/null)
+f_check_mount "disk" "$DISK"
+DISK_OK=$?
+
+if [ "$LOADED_OK" -eq 1 ] && [ "$DISK_OK" -eq 1 ]; then
+    NOTES+="PASS: Mount rules found using UID_MIN=${UID_MIN}. ${a_output[*]}"
 else
-    NOTES+="PASS: Configuration is synchronized. ${a_output[*]}"
+    RESULT="FAIL"
+    NOTES+="FAIL: Missing mount rules. ${a_output2[*]}"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
