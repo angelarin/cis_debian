@@ -1,49 +1,44 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="4.1.1"
-DESCRIPTION="Ensure a single firewall configuration utility is in use"
+CHECK_ID="v2 4.1.1"
+DESCRIPTION="Ensure ufw is installed"
 # -----------------------------------------------------
 
 {
-a_output=() a_output2=() RESULT="" NOTES=""
-active_firewall=() firewalls=("ufw" "nftables" "iptables")
+a_output=() a_output2=()
+RESULT="" NOTES=""
 
-# --- FUNGSI AUDIT FIREWALL TUNGGAL ---
-for firewall in "${firewalls[@]}"; do
-    case $firewall in
-    nftables)
-        cmd="nft" ;;
-    *)
-        cmd=$firewall ;;
-    esac
-    
-    # Cek apakah perintah tersedia, layanan diaktifkan, DAN aktif
-    if command -v $cmd &> /dev/null && systemctl is-enabled --quiet "$firewall" && systemctl is-active --quiet "$firewall"; then
-        active_firewall+=("$firewall")
+f_ufw_install_chk()
+{
+    # Memeriksa status instalasi paket menggunakan dpkg-query
+    if dpkg-query -s ufw &>/dev/null; then
+        l_status=$(dpkg-query -W -f='${Status}' ufw)
+        if [[ "$l_status" == "install ok installed" ]]; then
+            a_output+=(" - Paket 'ufw' terdeteksi dan terinstal dengan benar")
+        else
+            a_output2+=(" - Paket 'ufw' terdeteksi namun dalam status: $l_status")
+        fi
+    else
+        a_output2+=(" - Paket 'ufw' tidak ditemukan/tidak terinstal di sistem")
     fi
-done
+}
 
-# --- Assess combined status ---
-if [ ${#active_firewall[@]} -eq 1 ]; then
-    RESULT="PASS"
-    a_output+=(" - A single firewall utility is in use: ${active_firewall[0]}")
-elif [ ${#active_firewall[@]} -eq 0 ]; then
-    RESULT="FAIL"
-    a_output2+=(" - No primary firewall utility (ufw, nftables, iptables) is enabled and active.")
-else
-    RESULT="FAIL"
-    a_output2+=(" - Multiple firewall utilities are enabled/active: ${active_firewall[*]}")
-fi
+# Jalankan prosedur pengecekan
+f_ufw_install_chk
 
 # --- LOGIKA OUTPUT MASTER SCRIPT ---
+
 if [ "${#a_output2[@]}" -le 0 ]; then
-    NOTES+="PASS: ${a_output[*]}"
+    RESULT="PASS"
+    [ "${#a_output[@]}" -gt 0 ] && NOTES+="PASS: ${a_output[*]}"
 else
-    NOTES+="FAIL: Reason(s) for audit failure: ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    RESULT="FAIL"
+    NOTES+="FAIL: Uncomplicated Firewall (UFW) is not installed | Reason(s): ${a_output2[*]}"
+    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | Info: ${a_output[*]}"
 fi
 
+# Bersihkan karakter newline dan spasi berlebih untuk output CSV
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
 echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
 }

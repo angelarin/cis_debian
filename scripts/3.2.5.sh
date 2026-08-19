@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.2.3
-DESCRIPTION="Ensure dccp kernel module is not available"
+CHECK_ID="3.2.5"
+DESCRIPTION="Ensure sctp kernel module is not available"
 # -----------------------------------------------------
 
 {
-a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="dccp"
+a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="sctp"
 l_mod_type="net"
 l_mod_path="$(readlink -f /lib/modules/**/kernel/$l_mod_type | sort -u)"
 RESULT="" NOTES=""

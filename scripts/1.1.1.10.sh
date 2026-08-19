@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="3.2.3
-DESCRIPTION="Ensure dccp kernel module is not available"
+CHECK_ID="1.1.1.10"
+DESCRIPTION="Ensure usb storage kernel module is not available"
 # -----------------------------------------------------
 
 {
-a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="dccp"
-l_mod_type="net"
+a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="usb-storage"
+l_mod_type="drivers"
 l_mod_path="$(readlink -f /lib/modules/**/kernel/$l_mod_type | sort -u)"
 RESULT="" NOTES=""
 
@@ -26,7 +26,7 @@ a_output2+=(" - kernel module: \"$l_mod_name\" is loaded")
 fi
 
 if grep -Pq -- '\binstall\h+'"${l_mod_chk_name//-/_}"'\h+(\/usr)?\/bin\/(true|false)\b' <<< "${a_showconfig[*]}"; then
-a_output+=(" - kernel module: \"$l_mod_name\" is not loadable (install /bin/false or /bin/true found)")
+a_output+=(" - kernel module: \"$l_mod_name\" is not loadable (install /bin/false or /bin/true)")
 else
 a_output2+=(" - kernel module: \"$l_mod_name\" is loadable (no install /bin/false or /bin/true found)")
 fi

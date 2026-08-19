@@ -2,11 +2,11 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="3.2.4"
-DESCRIPTION="Ensure sctp kernel module is not available"
+DESCRIPTION="Ensure rds kernel module is not available"
 # -----------------------------------------------------
 
 {
-a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="sctp"
+a_output=() a_output2=() a_output3=() l_dl="" l_mod_name="rds"
 l_mod_type="net"
 l_mod_path="$(readlink -f /lib/modules/**/kernel/$l_mod_type | sort -u)"
 RESULT="" NOTES=""
