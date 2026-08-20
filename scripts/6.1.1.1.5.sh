@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-# --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="6.1.1.1.5"
 DESCRIPTION="Ensure journald Storage is configured"
-# -----------------------------------------------------
 
 {
 a_output=() a_output2=() l_analyze_cmd="$(readlink -f /bin/systemd-analyze)"
@@ -33,12 +31,12 @@ fi
 done <<< "$l_file_parameter"
 done <<< "$l_used_parameter_setting"
 else
-a_output2+=(" - Parameter: \"$l_parameter_name\" is not set in an included file" " *** Note: \"$l_parameter_name\" May be set in a file that's ignored by load procedure ***")
+a_output2+=(" - Parameter: \"$l_parameter_name\" is not set in an included file" " *** Note: \"$l_parameter_name\" May be set in a file that is ignored by load procedure ***")
 fi
 }
 
 for l_input_parameter in "${a_parameters[@]}"; do
-while IFS="=" read -r l_parameter_name l_parameter_value; do # Assess and check parameters
+while IFS="=" read -r l_parameter_name l_parameter_value; do
 l_parameter_name="${l_parameter_name// /}";
 l_parameter_value="${l_parameter_value// /}"
 l_value_out="${l_parameter_value//-/ through }";
@@ -48,7 +46,6 @@ f_config_file_parameter_chk
 done <<< "$l_input_parameter"
 done
 
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
 if [ "${#a_output2[@]}" -le 0 ]; then
     RESULT="PASS"
     NOTES+="PASS: ${a_output[*]}"
