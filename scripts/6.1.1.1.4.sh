@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.2.2"
+CHECK_ID="6.1.1.1.4"
 DESCRIPTION="Ensure journald ForwardToSyslog is disabled"
 # -----------------------------------------------------
 

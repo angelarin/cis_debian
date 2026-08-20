@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.3.4"
+CHECK_ID="6.1.2.4"
 DESCRIPTION="Ensure rsyslog log file creation mode is configured ($FileCreateMode <= 0640)"
 # -----------------------------------------------------
 

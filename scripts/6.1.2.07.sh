@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.3.7"
+CHECK_ID="6.1.2.7"
 DESCRIPTION="Ensure rsyslog is not configured to receive logs from a remote client"
 # -----------------------------------------------------
 

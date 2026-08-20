@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.3.5"
+CHECK_ID="6.1.2.5"
 DESCRIPTION="Ensure rsyslog logging is configured (Manual Review)"
 # -----------------------------------------------------
 

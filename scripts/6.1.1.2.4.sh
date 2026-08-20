@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.2.1.4"
+CHECK_ID="6.1.1.2.4"
 DESCRIPTION="Ensure systemd-journal-remote service is not in use"
 # -----------------------------------------------------
 

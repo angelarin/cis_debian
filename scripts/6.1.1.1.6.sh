@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.2.4"
-DESCRIPTION="Ensure journald Storage is configured"
+CHECK_ID="6.1.1.1.6"
+DESCRIPTION="Ensure journald Compress is configured"
 # -----------------------------------------------------
 
 {
 a_output=() a_output2=() l_analyze_cmd="$(readlink -f /bin/systemd-analyze)"
 l_systemd_config_file="systemd/journald.conf"
-a_parameters=("Storage=persistent")
+a_parameters=("Compress=yes")
 RESULT="" NOTES=""
 
 f_config_file_parameter_chk()

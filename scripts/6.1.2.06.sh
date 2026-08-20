@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.3.6"
+CHECK_ID="6.1.2.6"
 DESCRIPTION="Ensure rsyslog is configured to send logs to a remote log host (Manual Review)"
 # -----------------------------------------------------
 

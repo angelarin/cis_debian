@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.1.1"
-DESCRIPTION="Ensure journald service is enabled and active"
+CHECK_ID="6.1.1.2.3"
+DESCRIPTION="Ensure systemd-journal-upload is enabled and active"
 # -----------------------------------------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
-SERVICE="systemd-journald.service"
-EXPECTED_ENABLED="static"
+SERVICE="systemd-journal-upload.service"
+EXPECTED_ENABLED="enabled"
 EXPECTED_ACTIVE="active"
 
 # 1. Cek status ENABLED
 L_ENABLED=$(systemctl is-enabled "$SERVICE" 2>/dev/null)
 if [ "$L_ENABLED" = "$EXPECTED_ENABLED" ]; then
-    a_output+=(" - Service is ENABLED (Status: $L_ENABLED). Note: 'static' is the expected status.")
+    a_output+=(" - Service is ENABLED for boot (Status: $L_ENABLED).")
 else
     RESULT="FAIL"
     a_output2+=(" - Service ENABLED status is non-compliant (Status: $L_ENABLED, Expected: $EXPECTED_ENABLED).")

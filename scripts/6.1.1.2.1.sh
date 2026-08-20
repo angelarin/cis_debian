@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.2.1.1"
+CHECK_ID="6.1.1.2.1"
 DESCRIPTION="Ensure systemd-journal-remote is installed"
 # -----------------------------------------------------
 

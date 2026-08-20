@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.2.1.2"
+CHECK_ID="6.1.1.2.2"
 DESCRIPTION="Ensure systemd-journal-upload authentication is configured (Manual Review)"
 # -----------------------------------------------------
 

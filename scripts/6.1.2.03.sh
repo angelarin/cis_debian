@@ -2,15 +2,16 @@
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
 CHECK_ID="6.1.2.3"
-DESCRIPTION="Ensure journald Compress is configured"
+DESCRIPTION="Ensure journald is configured to send logs to rsyslog (ForwardToSyslog=yes)"
 # -----------------------------------------------------
 
 {
 a_output=() a_output2=() l_analyze_cmd="$(readlink -f /bin/systemd-analyze)"
 l_systemd_config_file="systemd/journald.conf"
-a_parameters=("Compress=yes")
-RESULT="" NOTES=""
+a_parameters=("ForwardToSyslog=yes")
+RESULT="PASS" NOTES=""
 
+# --- 1. AUDIT FORWARDTOSYSLOG ---
 f_config_file_parameter_chk()
 {
 l_used_parameter_setting=""
@@ -38,7 +39,7 @@ fi
 }
 
 for l_input_parameter in "${a_parameters[@]}"; do
-while IFS="=" read -r l_parameter_name l_parameter_value; do # Assess and check parameters
+while IFS="=" read -r l_parameter_name l_parameter_value; do
 l_parameter_name="${l_parameter_name// /}";
 l_parameter_value="${l_parameter_value// /}"
 l_value_out="${l_parameter_value//-/ through }";
@@ -48,14 +49,23 @@ f_config_file_parameter_chk
 done <<< "$l_input_parameter"
 done
 
+# --- 2. AUDIT STATUS LAYANAN ---
+L_SERVICE_STATUS=$(systemctl list-units --type service 2>/dev/null | grep -P -- '(rsyslog|journald)')
+if echo "$L_SERVICE_STATUS" | grep -q 'rsyslog\.service.*active' && echo "$L_SERVICE_STATUS" | grep -q 'systemd-journald\.service.*active'; then
+    a_output+=(" - Both rsyslog and journald services are loaded and active.")
+else
+    a_output2+=(" - One or both logging services (rsyslog/journald) are not active. Status: ${L_SERVICE_STATUS//$'\n'/ | }")
+    # Jika konfigurasi ForwardToSyslog PASS, status akhir adalah PASS/FAIL berdasarkan status layanan.
+    if [ "${#a_output2[@]}" -le 1 ]; then RESULT="PASS"; else RESULT="FAIL"; fi
+fi
+
 # --- LOGIKA OUTPUT MASTER SCRIPT ---
 if [ "${#a_output2[@]}" -le 0 ]; then
-    RESULT="PASS"
     NOTES+="PASS: ${a_output[*]}"
 else
-    RESULT="FAIL"
     NOTES+="FAIL: Reason(s) for audit failure: ${a_output2[*]}"
     [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | Correctly set: ${a_output[*]}"
+    RESULT="FAIL"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')

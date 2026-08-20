@@ -1,30 +1,32 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.3.2"
-DESCRIPTION="Ensure rsyslog service is enabled and active"
+CHECK_ID="6.1.1.1.1"
+DESCRIPTION="Ensure journald service is enabled and active"
 # -----------------------------------------------------
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
-SERVICE="rsyslog.service"
+SERVICE="systemd-journald.service"
+EXPECTED_ENABLED="static"
+EXPECTED_ACTIVE="active"
 
 # 1. Cek status ENABLED
 L_ENABLED=$(systemctl is-enabled "$SERVICE" 2>/dev/null)
-if [ "$L_ENABLED" = "enabled" ]; then
-    a_output+=(" - Service is ENABLED for boot (Status: $L_ENABLED).")
+if [ "$L_ENABLED" = "$EXPECTED_ENABLED" ]; then
+    a_output+=(" - Service is ENABLED (Status: $L_ENABLED). Note: 'static' is the expected status.")
 else
     RESULT="FAIL"
-    a_output2+=(" - Service ENABLED status is non-compliant (Status: $L_ENABLED, Expected: enabled).")
+    a_output2+=(" - Service ENABLED status is non-compliant (Status: $L_ENABLED, Expected: $EXPECTED_ENABLED).")
 fi
 
 # 2. Cek status ACTIVE
 L_ACTIVE=$(systemctl is-active "$SERVICE" 2>/dev/null)
-if [ "$L_ACTIVE" = "active" ]; then
+if [ "$L_ACTIVE" = "$EXPECTED_ACTIVE" ]; then
     a_output+=(" - Service is currently ACTIVE (Status: $L_ACTIVE).")
 else
     RESULT="FAIL"
-    a_output2+=(" - Service ACTIVE status is non-compliant (Status: $L_ACTIVE, Expected: active).")
+    a_output2+=(" - Service ACTIVE status is non-compliant (Status: $L_ACTIVE, Expected: $EXPECTED_ACTIVE).")
 fi
 
 # --- LOGIKA OUTPUT MASTER SCRIPT ---

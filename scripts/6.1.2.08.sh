@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # --- Tambahkan ID dan Deskripsi untuk Master Script ---
-CHECK_ID="6.1.3.8"
+CHECK_ID="6.1.2.8"
 DESCRIPTION="Ensure logrotate is configured (Manual Review)"
 # -----------------------------------------------------
 
