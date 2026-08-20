@@ -9,6 +9,13 @@ DESCRIPTION="Ensure GDM disable-user-list option is enabled"
 a_output=() a_output2=() RESULT="" NOTES=""
 SETTING="org.gnome.login-screen disable-user-list"
 
+# --- 0. CEK APAKAH GDM TERINSTALL ---
+if ! dpkg-query -s gdm3 &>/dev/null && ! dpkg-query -s gdm &>/dev/null; then
+    NOTES="PASS: GDM is not installed on the system (Not Applicable)."
+    echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
+    exit 0
+fi
+
 # --- FUNGSI AUDIT GDM SETTINGS ---
 L_VALUE=$(gsettings get $SETTING 2>/dev/null)
 

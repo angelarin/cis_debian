@@ -8,6 +8,13 @@ DESCRIPTION="Ensure GDM disabling automatic mounting of removable media is not o
 {
 a_output=() a_output2=() RESULT="" NOTES=""
 
+# --- 0. CEK APAKAH GDM TERINSTALL ---
+if ! dpkg-query -s gdm3 &>/dev/null && ! dpkg-query -s gdm &>/dev/null; then
+    NOTES="PASS: GDM is not installed on the system (Not Applicable)."
+    echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
+    exit 0
+fi
+
 check_setting()
 {
 # $1: setting name (e.g., automount)

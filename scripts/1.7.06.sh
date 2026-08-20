@@ -8,6 +8,13 @@ DESCRIPTION="Ensure GDM automatic mounting of removable media is disabled"
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
 
+# --- 0. CEK APAKAH GDM TERINSTALL ---
+if ! dpkg-query -s gdm3 &>/dev/null && ! dpkg-query -s gdm &>/dev/null; then
+    NOTES="PASS: GDM is not installed on the system (Not Applicable)."
+    echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
+    exit 0
+fi
+
 # --- FUNGSI AUDIT GDM AUTOMOUNT ---
 SETTINGS=(
     "org.gnome.desktop.media-handling automount"

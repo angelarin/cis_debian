@@ -8,6 +8,13 @@ DESCRIPTION="Ensure Xwayland is configured"
 {
 a_output=() a_output2=()
 # Debian biasanya menggunakan /etc/gdm3/custom.conf, namun kita cek sesuai prompt
+# --- 0. CEK APAKAH GDM TERINSTALL ---
+if ! dpkg-query -s gdm3 &>/dev/null && ! dpkg-query -s gdm &>/dev/null; then
+    NOTES="PASS: GDM is not installed on the system (Not Applicable)."
+    echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
+    exit 0
+fi
+
 l_conf_file="/etc/gdm3/custom.conf"
 [ ! -f "$l_conf_file" ] && l_conf_file="/etc/gdm/custom.conf"
 
