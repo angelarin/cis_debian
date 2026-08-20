@@ -8,11 +8,16 @@ a_output=() a_output2=() RESULT="PASS" NOTES=""
 
 f_check_execve() {
     local type=$1 output="$2"
-    if echo "$output" | grep -Eq -- "-a always,exit -C euid!=uid -F auid!=unset -S execve"; then
+    
+    # Mencari kata kunci execve, euid!=uid (atau sebaliknya), dan auid!=unset (atau -1)
+    if echo "$output" | grep -q "execve" && \
+       echo "$output" | grep -Eq "(euid!=uid|uid!=euid)" && \
+       echo "$output" | grep -Eq "(auid!=unset|auid!=-1|auid!=4294967295)"; then
+        
         a_output+=(" - $type: Rule for execve (euid!=uid) found.")
         return 1
     else
-        a_output2+=(" - $type: Rule for execve (euid!=uid) is missing.")
+        a_output2+=(" - $type: Rule for execve (euid!=uid) is missing or incomplete.")
         return 0
     fi
 }

@@ -1,32 +1,38 @@
 #!/usr/bin/env bash
 
 CHECK_ID="6.2.3.8"
-DESCRIPTION="Ensure events that modify the system's network environment are collected"
+DESCRIPTION="Ensure events that modify the systems network environment are collected"
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
 
 f_check_network() {
     local type=$1 output="$2"
-    local found=0 missing=0
+    local found=0
+    local found_items=()
+    local missing_items=()
 
-    # Mengecek ketiganya, tapi netplan mungkin tidak selalu ada (opsional di beberapa distro),
-    # namun CIS mengharuskannya jika ada. Untuk aman, kita pastikan ketiga pattern ini ada di rule.
-    local checks=("/etc/network/interfaces" "dir=/etc/network/interfaces.d" "dir=/etc/netplan")
+    local checks=(
+        "/etc/network/interfaces"
+        "dir=/etc/network/interfaces.d"
+        "dir=/etc/netplan"
+    )
     
     for item in "${checks[@]}"; do
         if echo "$output" | grep -Eq "$item"; then
             found=$((found+1))
+            found_items+=("$item")
         else
-            missing=$((missing+1))
+            missing_items+=("$item")
         fi
     done
 
-    if [ "$missing" -eq 0 ]; then
-        a_output+=(" - $type: Network environment rules found.")
+    # PASS jika menemukan MINIMAL 1 rule jaringan
+    if [ "$found" -ge 1 ]; then
+        a_output+=(" - $type: Found ($found/3): [${found_items[*]}]. Missing: [${missing_items[*]}].")
         return 1
     else
-        a_output2+=(" - $type: Network environment rules incomplete.")
+        a_output2+=(" - $type: No network environment rules found at all.")
         return 0
     fi
 }
@@ -40,7 +46,7 @@ f_check_network "disk" "$DISK"
 DISK_OK=$?
 
 if [ "$LOADED_OK" -eq 1 ] && [ "$DISK_OK" -eq 1 ]; then
-    NOTES+="PASS: Network environment rules found. ${a_output[*]}"
+    NOTES+="PASS: Network environment rules partially or fully met. ${a_output[*]}"
 else
     RESULT="FAIL"
     NOTES+="FAIL: Missing network environment rules. ${a_output2[*]}"

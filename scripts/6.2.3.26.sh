@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 CHECK_ID="6.2.3.26"
-DESCRIPTION="Ensure events that modify the system's Mandatory Access Controls are collected"
+DESCRIPTION="Ensure events that modify the systems Mandatory Access Controls are collected"
 
 {
 a_output=() a_output2=() RESULT="PASS" NOTES=""
