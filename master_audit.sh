@@ -58,7 +58,7 @@ while IFS= read -r -d $'\0' SCRIPT; do
         case "$STATUS" in
             PASS)   ((COUNT_PASS++)) ;;
             FAIL)   ((COUNT_FAIL++)) ;;
-            MANUAL) ((COUNT_MANUAL++)) ;;
+            MANUAL|REVIEW) ((COUNT_MANUAL++)) ;;
             *)      ((COUNT_ERROR++)) ;;
         esac
     else
