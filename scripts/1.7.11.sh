@@ -10,6 +10,7 @@ a_output=() a_output2=()
 # Debian biasanya menggunakan /etc/gdm3/custom.conf, namun kita cek sesuai prompt
 # --- 0. CEK APAKAH GDM TERINSTALL ---
 if ! dpkg-query -s gdm3 &>/dev/null && ! dpkg-query -s gdm &>/dev/null; then
+    RESULT="PASS"
     NOTES="PASS: GDM is not installed on the system (Not Applicable)."
     echo "$CHECK_ID|$DESCRIPTION|$RESULT|$NOTES"
     exit 0
