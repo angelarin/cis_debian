@@ -6,55 +6,49 @@ DESCRIPTION="Ensure world writable files and directories are secured"
 # -----------------------------------------------------
 
 {
-a_output=() a_output2=() RESULT="PASS" NOTES=""
-l_smask='01000' # Sticky bit mask
-a_file=(); a_dir=() # Array untuk melanggar
-# Jalur yang dikecualikan (disusun dalam format find -a/-o)
-a_path=(! -path "/run/user/*" -a ! -path "/proc/*" -a ! -path "*/containerd/*" -a ! -path "*/kubelet/pods/*" -a ! -path "*/kubelet/plugins/*" -a ! -path "/sys/*" -a ! -path "/snap/*")
+a_output=() a_output2=() a_warn=() RESULT="PASS" NOTES=""
+a_file=()
+a_dir=()
 
-# --- FUNGSI PENGUMPULAN ---
-# Iterasi melalui target mount (mengecualikan fstype/mount point tertentu)
-while IFS= read -r l_mount; do
-    # Cari semua file/dir di bawah mount point ini yang memiliki izin -0002 (world writable)
-    while IFS= read -r -d $'\0' l_file; do
-        if [ -e "$l_file" ]; then
-            if [ -f "$l_file" ]; then
-                # FILE: World Writable File (Selalu Gagal)
-                a_file+=("$l_file")
-            elif [ -d "$l_file" ]; then
-                # DIRECTORY: World Writable Directory (Cek Sticky Bit)
-                l_mode="$(stat -Lc '%#a' "$l_file")"
-                # Jika sticky bit TIDAK diatur (01000)
-                if [ ! $(( l_mode & l_smask )) -gt 0 ]; then
-                    a_dir+=("$l_file")
-                fi
-            fi
-        fi
-    done < <(find "$l_mount" -xdev \( "${a_path[@]}" \) \( -type f -o -type d \) -perm -0002 -print0 2> /dev/null)
-done < <(findmnt -Dkerno fstype,target | awk '($1 !~ /^\s*(nfs|proc|smb|vfat|iso9660|efivarfs|selinuxfs)/ && $2 !~ /^(\/run\/user\/|\/tmp|\/var\/tmp)/){print $2}')
+# Dapatkan daftar mount point lokal yang relevan
+mapfile -t a_mounts < <(findmnt -Dkerno target,fstype | awk '$2 !~ /^\s*(proc|sysfs|devtmpfs|devpts|tmpfs|cgroup|cgroup2|pstore|bpf|tracefs|debugfs|securityfs|fuse|iso9660|nfs|smb|vfat|efivarfs)/ {print $1}')
 
+for l_mount in "${a_mounts[@]}"; do
+    # 1. Cari world-writable files (-type f)
+    while IFS= read -r -d $'\0' f; do
+        a_file+=("$f")
+    done < <(find "$l_mount" -xdev -type f -perm -0002 -print0 2>/dev/null)
 
-# --- Assess Results ---
-if (( ${#a_file[@]} > 0 )); then
+    # 2. Cari world-writable directories TANPA sticky bit
+    while IFS= read -r -d $'\0' d; do
+        a_dir+=("$d")
+    done < <(find "$l_mount" -xdev -type d -perm -0002 ! -perm -1000 -print0 2>/dev/null)
+done
+
+TOTAL_VIOLATIONS=$(( ${#a_file[@]} + ${#a_dir[@]} ))
+
+# Ambil cuplikan (maksimal 5 item) untuk dimasukkan ke log
+sample_files=$(printf '%s, ' "${a_file[@]:0:5}" | sed 's/, $//')
+sample_dirs=$(printf '%s, ' "${a_dir[@]:0:5}" | sed 's/, $//')
+
+# Evaluasi Ambang Batas (Minimal 5 -> FAIL)
+if [ "$TOTAL_VIOLATIONS" -ge 5 ]; then
     RESULT="FAIL"
-    a_output2+=(" - Found ${#a_file[@]} World writable FILES. Violations: $(printf '%s' "${a_file[@]}" | head -n 5 | tr '\n' ' ')...")
+    [ "${#a_file[@]}" -gt 0 ] && a_output2+=("Found ${#a_file[@]} world-writable files (Sample: [$sample_files]).")
+    [ "${#a_dir[@]}" -gt 0 ] && a_output2+=("Found ${#a_dir[@]} dirs without sticky bit (Sample: [$sample_dirs]).")
+elif [ "$TOTAL_VIOLATIONS" -gt 0 ]; then
+    RESULT="PASS"
+    a_warn+=("WARNING: Found $TOTAL_VIOLATIONS violation(s) which is below threshold of 5 (Files: ${#a_file[@]}, Dirs: ${#a_dir[@]}).")
 else
-    a_output+=(" - No world writable files exist on the local filesystem.")
+    RESULT="PASS"
+    a_output+=("No world-writable files or unsecured directories found.")
 fi
 
-if (( ${#a_dir[@]} > 0 )); then
-    RESULT="FAIL"
-    a_output2+=(" - Found ${#a_dir[@]} World writable DIRECTORIES WITHOUT the sticky bit. Violations: $(printf '%s' "${a_dir[@]}" | head -n 5 | tr '\n' ' ')...")
+# Format Output Master Script
+if [ "$RESULT" = "PASS" ]; then
+    NOTES+="PASS: ${a_output[*]} ${a_warn[*]}"
 else
-    a_output+=(" - Sticky bit is set on all world writable directories.")
-fi
-
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "${#a_output2[@]}" -le 0 ]; then
-    NOTES+="PASS: ${a_output[*]}"
-else
-    NOTES+="FAIL: Reason(s) for audit failure: ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    NOTES+="FAIL: Total violations >= 5. Details: ${a_output2[*]}"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')

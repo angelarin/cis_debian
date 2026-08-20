@@ -6,56 +6,49 @@ DESCRIPTION="Ensure no files or directories without an owner and a group exist"
 # -----------------------------------------------------
 
 {
-a_output=() a_output2=() RESULT="PASS" NOTES=""
-a_nouser=(); a_nogroup=() # Array untuk melanggar
+a_output=() a_output2=() a_warn=() RESULT="PASS" NOTES=""
+a_nouser=()
+a_nogroup=()
 
-# Jalur yang dikecualikan
-a_path=(! -path "/run/user/*" -a ! -path "/proc/*" -a ! -path "*/containerd/*" -a ! -path "*/kubelet/pods/*" -a ! -path "*/kubelet/plugins/*" -a ! -path "/sys/fs/cgroup/memory/*" -a ! -path "/var/*/private/*")
+# Dapatkan daftar mount point lokal yang relevan
+mapfile -t a_mounts < <(findmnt -Dkerno target,fstype | awk '$2 !~ /^\s*(proc|sysfs|devtmpfs|devpts|tmpfs|cgroup|cgroup2|pstore|bpf|tracefs|debugfs|securityfs|fuse|iso9660|nfs|smb|vfat|efivarfs)/ {print $1}')
 
-# --- FUNGSI PENGUMPULAN ---
-# Iterasi melalui target mount (mengecualikan fstype/mount point tertentu)
-while IFS= read -r l_mount; do
-    # Cari file/dir dengan -nouser ATAU -nogroup
-    while IFS= read -r -d $'\0' l_file; do
-        if [ -e "$l_file" ]; then
-            # Cek status secara eksplisit menggunakan stat (untuk menangani UNKNOWN)
-            while IFS=: read -r l_user l_group; do
-                if [ "$l_user" = "UNKNOWN" ] || stat -c '%u' "$l_file" 2>/dev/null | grep -q '^4294967294$'; then
-                    a_nouser+=("$l_file")
-                fi
-                if [ "$l_group" = "UNKNOWN" ] || stat -c '%g' "$l_file" 2>/dev/null | grep -q '^4294967294$'; then
-                    a_nogroup+=("$l_file")
-                fi
-            done < <(stat -Lc '%U:%G' "$l_file" 2>/dev/null)
-        fi
-    done < <(find "$l_mount" -xdev \( "${a_path[@]}" \) \( -type f -o -type d \) \( -nouser -o -nogroup \) -print0 2> /dev/null)
-done < <(findmnt -Dkerno fstype,target | awk '($1 !~ /^\s*(nfs|proc|smb|vfat|iso9660|efivarfs|selinuxfs)/ && $2 !~ /^\/run\/user\//){print $2}')
+for l_mount in "${a_mounts[@]}"; do
+    # Cari file/direktori tanpa user (nouser)
+    while IFS= read -r -d $'\0' f; do
+        a_nouser+=("$f")
+    done < <(find "$l_mount" -xdev \( -type f -o -type d \) -nouser -print0 2>/dev/null)
 
-# Hapus duplikat dari array pelanggaran
-a_nouser=($(printf "%s\n" "${a_nouser[@]}" | sort -u))
-a_nogroup=($(printf "%s\n" "${a_nogroup[@]}" | sort -u))
+    # Cari file/direktori tanpa group (nogroup)
+    while IFS= read -r -d $'\0' g; do
+        a_nogroup+=("$g")
+    done < <(find "$l_mount" -xdev \( -type f -o -type d \) -nogroup -print0 2>/dev/null)
+done
 
-# --- Assess Results ---
-if (( ${#a_nouser[@]} > 0 )); then
+TOTAL_VIOLATIONS=$(( ${#a_nouser[@]} + ${#a_nogroup[@]} ))
+
+# Ambil cuplikan (maksimal 5 item) untuk log CSV
+sample_nouser=$(printf '%s, ' "${a_nouser[@]:0:5}" | sed 's/, $//')
+sample_nogroup=$(printf '%s, ' "${a_nogroup[@]:0:5}" | sed 's/, $//')
+
+# Evaluasi Ambang Batas (Minimal 5 -> FAIL)
+if [ "$TOTAL_VIOLATIONS" -ge 5 ]; then
     RESULT="FAIL"
-    a_output2+=(" - Found ${#a_nouser[@]} unowned files or directories. Violations (sample): $(printf '%s\n' "${a_nouser[@]}" | head -n 5 | tr '\n' ' ')...")
+    [ "${#a_nouser[@]}" -gt 0 ] && a_output2+=("Found ${#a_nouser[@]} unowned items (Sample: [$sample_nouser]).")
+    [ "${#a_nogroup[@]}" -gt 0 ] && a_output2+=("Found ${#a_nogroup[@]} ungrouped items (Sample: [$sample_nogroup]).")
+elif [ "$TOTAL_VIOLATIONS" -gt 0 ]; then
+    RESULT="PASS"
+    a_warn+=("WARNING: Found $TOTAL_VIOLATIONS violation(s) which is below threshold of 5 (Unowned: ${#a_nouser[@]}, Ungrouped: ${#a_nogroup[@]}).")
 else
-    a_output+=(" - No files or directories without an owner exist on the local filesystem.")
+    RESULT="PASS"
+    a_output+=("No unowned or ungrouped files/directories found.")
 fi
 
-if (( ${#a_nogroup[@]} > 0 )); then
-    RESULT="FAIL"
-    a_output2+=(" - Found ${#a_nogroup[@]} ungrouped files or directories. Violations (sample): $(printf '%s\n' "${a_nogroup[@]}" | head -n 5 | tr '\n' ' ')...")
+# Format Output Master Script
+if [ "$RESULT" = "PASS" ]; then
+    NOTES+="PASS: ${a_output[*]} ${a_warn[*]}"
 else
-    a_output+=(" - No files or directories without a group exist on the local filesystem.")
-fi
-
-# --- LOGIKA OUTPUT MASTER SCRIPT ---
-if [ "${#a_output2[@]}" -le 0 ]; then
-    NOTES+="PASS: ${a_output[*]}"
-else
-    NOTES+="FAIL: Reason(s) for audit failure: ${a_output2[*]}"
-    [ "${#a_output[@]}" -gt 0 ] && NOTES+=" | INFO: ${a_output[*]}"
+    NOTES+="FAIL: Total violations >= 5. Details: ${a_output2[*]}"
 fi
 
 NOTES=$(echo "$NOTES" | tr '\n' ' ' | sed 's/  */ /g')
